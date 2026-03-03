@@ -184,14 +184,14 @@ self_update() {
             # On a branch (if using tags we will be detached)
             git pull --quiet --force
         fi
-        GIT_VER=$(git describe --tags)
+        GIT_VER=$(git describe --tags --always)
         echo -e "${B_GREEN}Now on git version ${GIT_VER}"
         echo -e "${B_GREEN}Running the new install script..."
         cd - >/dev/null
         exec "$SCRIPTNAME" "${ARGS[@]}"
         exit 0 # Exit this old instance
     fi
-    GIT_VER=$(git describe --tags)
+    GIT_VER=$(git describe --tags --always)
     echo -e "${B_GREEN}Already the latest version: ${GIT_VER}"
 }
 
