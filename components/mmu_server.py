@@ -1,15 +1,12 @@
-# Happy Hare MMU Software
-# Moonraker support for a file-preprocessor that injects MMU metadata into gcode files
+# Multi-Hare MMU Software
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
 #
-# Original slicer parsing
-# Copyright (C) 2023  Kieran Eglin <@kierantheman (discord)>, <kieran.eglin@gmail.com>
-#
-# (\_/)
-# ( *,*)
-# (")_(") MMU Ready
+# Copyright of original Happy-Hare software:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
+#     Copyright (C) 2023  Kieran Eglin <@kierantheman (discord)>, <kieran.eglin@gmail.com>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
@@ -64,7 +61,7 @@ class MmuServer:
         self.spool_location = {}
 
         self.nb_gates = None             # Set during initialization to the size of the MMU or 1 if standalone
-        self.cache_lock = asyncio.Lock() # Lock to serialize a async calls for Happy Hare
+        self.cache_lock = asyncio.Lock() # Lock to serialize a async calls for Multi Hare
 
         # Spoolman filament info retrieval functionality and update reporting
         if self.spoolman:
@@ -103,7 +100,7 @@ class MmuServer:
 
     async def component_init(self) -> None:
         if self.spoolman is None:
-            logging.warning("Spoolman not available. Happy Hare remote methods not available")
+            logging.warning("Spoolman not available. Multi Hare remote methods not available")
             return
 
         # Get current printer hostname
@@ -140,7 +137,7 @@ class MmuServer:
                 self.spoolman_has_extras = extras
 
             elif self.spoolman_version:
-                logging.error(f"Could not initialize Spoolman db for Happy Hare. Spoolman db version too old (found {self.spoolman_version} < {MIN_SM_VER})")
+                logging.error(f"Could not initialize Spoolman db for Multi Hare. Spoolman db version too old (found {self.spoolman_version} < {MIN_SM_VER})")
             else:
                 logging.error("Could not connect to Spoolman db. Perhaps it is not initialized yet? Will try again on next request")
                 return False
@@ -410,7 +407,7 @@ class MmuServer:
     async def _send_gate_map_update(self, gate_ids, replace=False, silent=False) -> bool:
         '''
         Retrieve filament attributes for list of (gate, spool_id) tuples
-        Pass back to Happy Hare.
+        Pass back to Multi Hare.
 
         If no mmu backend has been detected, ignore the request
         '''
@@ -443,7 +440,7 @@ class MmuServer:
     async def get_filaments(self, gate_ids, silent=False) -> bool:
         '''
         Retrieve filament attributes for list of (gate, spool_id) tuples
-        Pass back to Happy Hare. Does not require extended Spoolman db
+        Pass back to Multi Hare. Does not require extended Spoolman db
         '''
         async with self.cache_lock:
             return await self._send_gate_map_update(gate_ids, silent=silent)
@@ -452,7 +449,7 @@ class MmuServer:
         '''
         Store the gate map for the printer for a list of (gate, spool_id) tuples.
         This attempts to reduce the number of necessary tasks and then run them in parallel
-        Then updates Happy Hare with filament attributes
+        Then updates Multi Hare with filament attributes
         '''
         if not await self._check_init_spoolman(): return
         async with self.cache_lock:
@@ -508,13 +505,13 @@ class MmuServer:
                         self.server.send_event("spoolman:set_spool_gate", {"spool_id": sid, "printer": self.printer_hostname, "gate": gate})
                         await self._log_n_send(f"Spool {sid} assigned to printer {self.printer_hostname} @ gate {gate} in Spoolman db", silent=silent)
 
-            # Send update of filament attributes back to Happy Hare
+            # Send update of filament attributes back to Multi Hare
             return await self._send_gate_map_update(gate_ids, silent=silent)
 
     async def pull_gate_map(self, silent=False) -> bool:
         '''
         Get all spools assigned to the current printer from Spoolman db and map them to gates
-        Pass back to Happy Hare
+        Pass back to Multi Hare
         '''
         if not await self._check_init_spoolman(): return
         async with self.cache_lock:
@@ -620,7 +617,7 @@ class MmuServer:
                         self.server.send_event("spoolman:set_spool_gate", {"spool_id": sid, "printer": self.printer_hostname, "gate": gate})
                         await self._log_n_send(f"Spool {sid} assigned to printer {self.printer_hostname} @ gate {gate} in Spoolman db", silent=silent)
 
-            # Sync with Happy Hare if required
+            # Sync with Multi Hare if required
             if sync and updated_gate_ids:
                 gate_ids = [(gate, spool_id) for gate, spool_id in updated_gate_ids.items()]
                 return await self._send_gate_map_update(gate_ids, replace=True, silent=silent)
@@ -662,7 +659,7 @@ class MmuServer:
                     self.server.send_event("spoolman:unset_spool_gate", {"spool_id": sid, "old_printer": self.printer_hostname, "old_gate": gate})
                     await self._log_n_send(f"Spool {sid} unassigned from printer {old_printer} and gate {old_gate} in Spoolman db", silent=silent)
 
-            # Sync with Happy Hare if required
+            # Sync with Multi Hare if required
             if sync and updated_gate_ids:
                 gate_ids = [(gate, spool_id) for gate, spool_id in updated_gate_ids.items()]
                 return await self._send_gate_map_update(gate_ids, replace=True, silent=silent)
@@ -863,8 +860,8 @@ def load_component(config):
 #
 AUTHORZIED_SLICERS = ['PrusaSlicer', 'SuperSlicer', 'OrcaSlicer', 'BambuStudio']
 
-HAPPY_HARE_FINGERPRINT = "; processed by HappyHare"
-MMU_REGEX = r"^" + HAPPY_HARE_FINGERPRINT
+MULTI_HARE_FINGERPRINT = "; processed by Multi-Hare"
+MMU_REGEX = r"^" + MULTI_HARE_FINGERPRINT
 SLICER_REGEX = r"^;.*generated by ([a-z]*) .*$|^; (BambuStudio) .*$"
 ORCASLICER_VERSION_REGEX = r"^;\s*generated by OrcaSlicer\s+(\d+(?:\.\d+){0,3})"
 
@@ -931,7 +928,7 @@ def _format_volume(v: float) -> str:
     return s.rstrip("0").rstrip(".")
 
 def gcode_processed_already(file_path):
-    """Expects first line of gcode to be the HAPPY_HARE_FINGERPRINT '; processed by HappyHare'"""
+    """Expects first line of gcode to be the MULTI_HARE_FINGERPRINT '; processed by Multi-Hare'"""
 
     mmu_regex = re.compile(MMU_REGEX, re.IGNORECASE)
 
@@ -1115,7 +1112,7 @@ def process_file(input_filename, output_filename, insert_nextpos, tools_used, to
     with open(input_filename, 'r') as infile, open(output_filename, 'w') as outfile:
         buffer = [] # Buffer lines between a "T" line and the next matching "G1" line
         tool = None # Store the tool number from a "T" line
-        outfile.write(f'{HAPPY_HARE_FINGERPRINT}\n')
+        outfile.write(f'{MULTI_HARE_FINGERPRINT}\n')
 
         for line in infile:
             line = add_placeholder(line, tools_used, total_toolchanges, colors, temps, materials, purge_volumes, filament_names)
@@ -1244,7 +1241,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--path", default=os.path.abspath(os.path.dirname(__file__)), metavar='<path>', help="optional absolute path for file")
     parser.add_argument("-u", "--ufp", metavar="<ufp file>", default=None, help="optional path of ufp file to extract")
     parser.add_argument("-o", "--check-objects", dest='check_objects', action='store_true', help="process gcode file for exclude object functionality")
-    parser.add_argument("-m", "--placeholders", dest='placeholders', action='store_true', help="process happy hare mmu placeholders")
+    parser.add_argument("-m", "--placeholders", dest='placeholders', action='store_true', help="process Multi Hare mmu placeholders")
     parser.add_argument("-n", "--nextpos", dest='nextpos', action='store_true', help="add next position to tool change")
     args = parser.parse_args()
     config: Dict[str, Any] = {}

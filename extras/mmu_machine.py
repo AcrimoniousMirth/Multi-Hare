@@ -1,4 +1,5 @@
-# Happy Hare MMU Software
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
 #
 # Definition of basic physical characteristics of MMU (including type/style)
 #   - allows for hardware configuration validation
@@ -10,14 +11,15 @@
 #   - extruder endstops and extruder only homing
 #   - switchable drive steppers on rails
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Original Happy Hare copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
 # Based on code by Kevin O'Connor <kevin@koconnor.net>
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
@@ -498,7 +500,7 @@ class MmuToolHead(toolhead.ToolHead, object):
             self.last_flush_time = self.last_sg_flush_time = self.min_restart_time = 0. # last_sg_flush_time deprecated
             self.need_flush_time = self.step_gen_time = self.clear_history_time = 0.
             # Kinematic step generation scan window time tracking
-            self.kin_flush_delay = toolhead.SDS_CHECK_TIME # Happy Hare: Use base class
+            self.kin_flush_delay = toolhead.SDS_CHECK_TIME # Multi-Hare: Use base class
             self.kin_flush_times = []
 
         if self.motion_queuing:
@@ -571,18 +573,42 @@ class MmuToolHead(toolhead.ToolHead, object):
 
     def handle_connect(self):
         self.printer_toolhead = self.printer.lookup_object('toolhead')
+        
+        # Initialize MmuExtruderStepper for all defined systems
+        self.system_extruder_steppers = {}
+        for sys_id, sys in self.mmu.systems.items():
+            extruder_name = sys.get('extruder', 'extruder')
+            if extruder_name not in self.system_extruder_steppers:
+                extruder_config = self.printer.lookup_object('configfile').getsection(extruder_name)
+                mmu_ext = MmuExtruderStepper(extruder_config, self.kin.rails[1])
+                self.system_extruder_steppers[extruder_name] = mmu_ext
+                # Swap the printer's extruder stepper for our homeable one
+                printer_extruder = self.printer.lookup_object(extruder_name)
+                printer_extruder.extruder_stepper = mmu_ext
+                mmu_ext.stepper.set_trapq(printer_extruder.get_trapq())
+        
+        self.update_active_system()
 
-        printer_extruder = self.printer_toolhead.get_extruder()
-        if self.mmu_machine.homing_extruder:
-            # Restore original extruder options in case user macros reference them
-            for key, value in self.old_ext_options.items():
-                self.config.fileconfig.set('extruder', key, value)
+    def update_active_system(self, system_id=None):
+        if not hasattr(self, 'printer_toolhead'): return # Too early
+        if system_id is not None:
+             self.mmu.system_active = system_id
+             
+        sys = self.mmu.get_active_system()
+        if not sys: return
+        
+        # Get the extruder for the current system
+        self.extruder_name = sys.get('extruder', 'extruder')
+        self.toolhead_name = sys.get('toolhead', 'T0')
+        
+        # Update references for the MMU machine
+        if self.extruder_name in self.system_extruder_steppers:
+            self.mmu_extruder_stepper = self.system_extruder_steppers[self.extruder_name]
+        
+        self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
-            # Now we can switch in homing MmuExtruderStepper
-            printer_extruder.extruder_stepper = self.mmu_extruder_stepper
-            self.mmu_extruder_stepper.stepper.set_trapq(printer_extruder.get_trapq())
-        else:
-            self.mmu_extruder_stepper = printer_extruder.extruder_stepper
+        self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s)" % 
+                          (self.toolhead_name, self.extruder_name))
 
     # Ensure the correct number of axes for convenience - MMU only has two
     # Also, handle case when gear rail is synced to extruder
@@ -614,26 +640,43 @@ class MmuToolHead(toolhead.ToolHead, object):
         gear_rail = m_th.get_kinematics().rails[1]
         mmu_trapq = m_th.get_trapq()
 
-        prev_sync_mode = self.sync_mode
-        if self.sync_mode not in [self.GEAR_ONLY, None]:
-            self._resync_no_lock(None) # Unsync first
+        # Surgical reconfiguration for Multi-System support
+        # We only want to unsync if the requested 'selected' steppers are currently
+        # participating in a synced print.
+        if self.sync_mode is not None:
+            # Identify steppers currently bound to the printer toolhead
+            synced_steppers = [s for s in self.all_gear_rail_steppers 
+                              if s.get_trapq() and s.get_trapq() != mmu_trapq]
+            
+            # If the specific stepper we want to move is currently synced, we MUST unsync
+            if any(s.get_name() in (selected or []) for s in synced_steppers):
+                self._resync_no_lock(None)
+            else:
+                # We are doing a background operation on a non-synced stepper.
+                # Don't touch the sync mode, just proceed with "soft" reconfiguration.
+                ths = [self.mmu_toolhead] # Only quiescent the MMU toolhead
+                t_cut = self._quiesce_align_get_tcut(ths, full=False)
         else:
             ths = [self.printer_toolhead, self.mmu_toolhead]
             t_cut = self._quiesce_align_get_tcut(ths, full=False)
 
         # Activate only the desired gear steppers
         pos = [0., self.mmu_toolhead.get_position()[1], 0.]
-        gear_rail.steppers = []
+        
+        # When synced, we must preserve the synced steppers in the rail list
+        synced_steppers = [s for s in gear_rail.steppers if s.get_trapq() and s.get_trapq() != mmu_trapq]
+        gear_rail.steppers = synced_steppers.copy()
 
         self.selected_gear_steppers = []
         for s in self.all_gear_rail_steppers:
             if selected and s.get_name() in selected:
                 self.selected_gear_steppers.append(s)
-                gear_rail.steppers.append(s)
-                self._register(m_th, s, trapq=mmu_trapq) # s.set_trapq(mmu_trapq)
-            else:
-                # Cripple unused/unwanted gear steppers
-                self._unregister(m_th, s) # s.set_trapq(None)
+                if s not in gear_rail.steppers:
+                    gear_rail.steppers.append(s)
+                self._register(m_th, s, trapq=mmu_trapq)
+            elif s not in synced_steppers:
+                # Cripple only if not currently synced by the printer
+                self._unregister(m_th, s)
 
         if selected:
             if not gear_rail.steppers:
@@ -1131,7 +1174,7 @@ class MmuHoming(Homing, object):
         # Perform first home
         endstops = [es for rail in rails for es in rail.get_endstops()]
         hi = rails[0].get_homing_info()
-        hmove = HomingMove(self.printer, endstops, self.toolhead) # Happy Hare: Override default toolhead
+        hmove = HomingMove(self.printer, endstops, self.toolhead) # Multi-Hare: Override default toolhead
         hmove.homing_move(homepos, hi.speed)
         # Perform second home
         if hi.retract_dist:
@@ -1148,7 +1191,7 @@ class MmuHoming(Homing, object):
             startpos = [rp - ad * retract_r
                         for rp, ad in zip(retractpos, axes_d)]
             self.toolhead.set_position(startpos)
-            hmove = HomingMove(self.printer, endstops, self.toolhead) # Happy Hare: Override default toolhead
+            hmove = HomingMove(self.printer, endstops, self.toolhead) # Multi-Hare: Override default toolhead
             hmove.homing_move(homepos, hi.second_homing_speed)
             if hmove.check_no_movement() is not None:
                 raise self.printer.command_error(

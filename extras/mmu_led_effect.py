@@ -1,14 +1,19 @@
-# Happy Hare MMU Software
+# Multi-Hare MMU Software
+#
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
+#
 # Wrapper around led_effect klipper module (included) to replicate any effect on entire strip
 # as well as on each individual LED for per-gate effects. This relies on the [mmu_leds] section
 # for each mmu_unit
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Copyright of original Happy-Hare software:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-# Happy Hare MMU Software
-#
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
 #
 # Goal: Manager class to handle sync-feedback and adjustment of gear stepper rotation distance
 #       to keep MMU in sync with extruder as well as some filament tension routines.
@@ -17,16 +15,19 @@
 #   MMU_SYNC_FEEDBACK
 #   MMU_FLOWGUARD
 #
+# Original Happy Hare copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+# (\_/)                      (\_/)
+# ( *,*)                    (^u^ )
+# (")_(") Multi Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
 import logging, math, time, os
 
-# Happy Hare imports
+# Multi-Hare imports
 
 # MMU subcomponent clases
 from .mmu_sync_controller  import SyncControllerConfig, SyncController

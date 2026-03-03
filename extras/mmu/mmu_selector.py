@@ -1,9 +1,17 @@
-# Happy Hare MMU Software
-#
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
 #
 # Goal: Implementation of various selector variations:
+#
+# Original Happy Hare Copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+#
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # VirtualSelector:
 #  Implements selector for type-B MMU's with gear driver per gate
@@ -49,19 +57,13 @@
 #    MMU_GRIP
 #    MMU_RELEASE
 #
-#
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
-#
-# This file may be distributed under the terms of the GNU GPLv3 license.
-#
+
 import random, logging, math, re
 
 # Klipper imports
 from ..homing          import Homing, HomingMove
 
-# Happy Hare imports
+# Multi-Hare imports
 from ..                import mmu_machine
 from ..mmu_machine     import MmuToolHead
 
@@ -215,7 +217,7 @@ class LinearSelector(BaseSelector, object):
 
         # To simplfy config CAD related parameters are set based on vendor and version setting
         #
-        # These are default for ERCFv1.1 - the first MMU supported by Happy Hare
+        # These are default for ERCFv1.1 - the first MMU supported by Multi-Hare
         #  cad_gate0_pos          - approximate distance from endstop to first gate
         #  cad_gate_width         - width of each gate
         #  cad_bypass_offset      - distance from end of travel to the bypass
@@ -1617,7 +1619,7 @@ class MacroSelector(BaseSelector, object):
         self.mmu.calibration_status |= self.mmu.CALIBRATED_SELECTOR # No calibration necessary
 
     def handle_ready(self):
-        logging.info("Happy Hare MacroSelector: Gate %d" % self.mmu.gate_selected)
+        logging.info("Multi-Hare MacroSelector: Gate %d" % self.mmu.gate_selected)
         self.select_gate(self.mmu.gate_selected)
 
     def select_gate(self, gate):

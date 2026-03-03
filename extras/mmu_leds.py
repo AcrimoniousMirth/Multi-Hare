@@ -1,14 +1,18 @@
-# Happy Hare MMU Software
+# Multi-Hare MMU Software
+#
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
 #
 # Allows for flexible creation of virtual leds chains - one for each of the supported
 # segments (exit, entry, status). Entry and exit are indexed by gate number.
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Copyright of original Happy-Hare software:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #

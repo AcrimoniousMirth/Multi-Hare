@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-# Happy Hare MMU Software
+# Multi-Hare MMU Software
+#
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
+#
 # Simulator/CLI for the (movement-based) filament tension controller
 #
 # Simulator invocation:
@@ -10,6 +14,7 @@
 #    --buffer-max-range-mm   (default=12.0)
 #    --initial-sensor=[random|neutral]
 #    --stride-mm=10          (normal extruder movement between updates)
+#    --tick-dt-s             (default dt used only for manual 'tick', 'clog' and 'tangle', default: 1.0)
 #    --tick-dt-s             (default dt used only for manual 'tick', 'clog' and 'tangle', default: 1.0)
 #    --rd-start              (starting extruder rotation distance, default: 20.0)
 #    --sensor-lag-mm         (lag in sensor reacting to movement, default: 0)
@@ -28,12 +33,13 @@
 #
 # Requires: mmu_sync_feedback_manager.py (SyncControllerConfig, SyncController)
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Copyright of original Happy-Hare software:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(") 
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 

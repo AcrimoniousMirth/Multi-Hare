@@ -1,4 +1,8 @@
-# Happy Hare MMU Software
+# Multi-Hare MMU Software
+#
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
+#
 # Easy setup of all sensors for MMU
 #
 # Pre-gate sensors:
@@ -29,9 +33,9 @@
 # RunoutHelper based on:
 # Generic Filament Sensor Module Copyright (C) 2019  Eric Callahan <arksine.code@gmail.com>
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+# (\_/)                      (\_/)
+# ( *,*)                    (^u^ )
+# (")_(") Multi Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 

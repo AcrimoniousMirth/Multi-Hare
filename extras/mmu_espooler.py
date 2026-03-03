@@ -1,4 +1,7 @@
-# Happy Hare MMU Software
+# Multi-Hare MMU Software
+#
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
 #
 # Implements h/w "eSpooler" control for a MMU unit that is powered by a DC motor
 # (normally PWM speed controlled) that can be used to rewind a filament spool or be
@@ -6,12 +9,13 @@
 # For simplicity of setup it is assumed that all pins are of the same type/config per mmu_unit.
 # Control is via direct control or klipper events.
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Copyright of original Happy-Hare software:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #

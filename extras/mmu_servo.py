@@ -1,17 +1,22 @@
-# Happy Hare MMU Software
+# Multi-Hare MMU Software
+#
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
+#
 # Custom servo support that carefully synchronizes PWM changes to avoid "kickback" caused
 # by a truncated final pulse with digital servos.
 # All existing servo functionality is available with the addition of a 'DURATION'
 # parameter for setting PWM pulse train with auto off
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Copyright of original Happy-Hare software:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
 # Based on original servo.py Copyright (C) 2017-2020  Kevin O'Connor <kevin@koconnor.net>
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #

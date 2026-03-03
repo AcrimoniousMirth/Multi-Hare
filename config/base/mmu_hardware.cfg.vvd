@@ -1,23 +1,25 @@
 ########################################################################################################################
-# Happy Hare MMU Software
+# Multi Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
 #
 # EDIT THIS FILE BASED ON YOUR SETUP
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Original Happy Hare Copyright: 
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
-# Goal: Happy Hare MMU hardware config file with config for BTT ViViD MCU board
+# Goal: Multi Hare MMU hardware config file with config for BTT ViViD MCU board
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+# (\_/)                      (\_/)
+# ( *,*)                    (^u^ )
+# (")_(") Multi Hare Ready (")_(")
 #
 #
 # Notes about setup of common external MCUs can be found here:
 #  https://github.com/moggieuk/Happy-Hare/blob/main/doc/mcu_notes.md
 # 
-# Note about "touch" endstops: Happy Hare provides extremely flexible homing options using both single steppers or
+# Note about "touch" endstops: Multi Hare provides extremely flexible homing options using both single steppers or
 # synced steppers. The "touch" option leverages stallguard and thus requires the appropriate 'diag_pin' and stallguard
 # parameters set on the TMC driver section. If you have the diag_pin exposed, it is harmless to define this because
 # they will only be used when explicitly needed and configured.
@@ -34,7 +36,7 @@
 # See 'mmu.cfg' for serial definition and pins aliases
 #
 # HOMING CAPABLE EXTRUDER (VERY ADVANCED) -----------------------------------------------------------------------------
-# With Happy Hare installed even the extruder can be homed. You will find the usual 'endstop' parameters can be added
+# With Multi Hare installed even the extruder can be homed. You will find the usual 'endstop' parameters can be added
 # to your '[extruder]' section.  Useless you have some clever load cell attached to your nozzle it only really makes
 # sense to configure stallguard style "touch" homing. To do this add lines similar to this to your existing
 # '[extruder]' definition in printer.cfg.
@@ -48,7 +50,7 @@
 #    diag_pin: E_DIAG		# Set to MCU pin connected to TMC DIAG pin for extruder
 #    driver_SGTHRS: 100		# 255 is most sensitive value, 0 is least sensitive
 #
-# Happy Hare will take care of the rest and add a 'mmu_ext_touch' endstop automatically
+# Multi Hare will take care of the rest and add a 'mmu_ext_touch' endstop automatically
 #
 
 
@@ -288,7 +290,7 @@ color_order: GRB
 #
 # Note the use of separate lines for each part of the definition,
 #
-# ADVANCED: Happy Hare provides a convenience wrapper [mmu_led_effect] that not only creates an effect on each of the
+# ADVANCED: Multi Hare provides a convenience wrapper [mmu_led_effect] that not only creates an effect on each of the
 # [mmu_leds] specified segments as a whole but also each individual LED for atomic control. See mmu_leds.cfg for examples
 #
 # (comment out this whole section if you don't have/want leds; uncomment/edit LEDs fitted on your MMU)

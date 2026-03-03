@@ -1,17 +1,21 @@
 #!/bin/bash
-# Happy Hare MMU Software
+# Multi-Hare MMU Software
+#
+# A modified fork of Happy-Hare to support multiple toolheads
+# Modifications by AcrimoniousMirth
 #
 # Installer / Updater script
 #
-# Copyright (C) 2022-2026 moggieuk#6538 (discord)
-#                         moggieuk@hotmail.com
+# Copyright of original Happy-Hare software:
+#     Copyright (C) 2022-2026 moggieuk#6538 (discord)
+#                               moggieuk@hotmail.com
 #
 # Creality K1 Support
 #               2024  hamyy <oudy_1999@hotmail.com>
 #               2024  Unsweeticetea <iamzevle@gmail.com>
 #               2024  Dmitry Kychanov <k1-801@mail.ru>
 #
-VERSION=3.42 # Important: Keep synced with mmy.py
+VERSION=0.1 # Important: Keep synced with mmu.py
 
 F_VERSION=$(echo "$VERSION" | sed 's/\([0-9]\+\)\.\([0-9]\)\([0-9]\)/\1.\2.\3/')
 SCRIPT="$(readlink -f "$0")"
@@ -105,9 +109,9 @@ get_logo() {
     caption=$1
     logo=$(cat <<EOF
 ${INFO}
-(\_/)
-( *,*)
-(")_(") ${caption}
+ (\_/)  (\_/)
+ ( *,*) ( *,*)
+ (")_(")(")_(") ${caption}
 ${OFF}
 EOF
     )
@@ -116,9 +120,9 @@ EOF
 
 sad_logo=$(cat <<EOF
 ${INFO}
-(\_/)
-( v,v)
-(")^(") Very Unhappy Hare
+ (\_/)  (\_/)
+ ( v,v) ( v,v)
+ (")^(")(")^(") Very Unhappy Hare
 ${OFF}
 EOF
 )
@@ -160,7 +164,7 @@ self_update() {
     set +e
     git diff --quiet --exit-code "origin/$BRANCH"
     if [ $? -eq 1 ]; then
-        echo -e "${B_GREEN}Found a new version of Happy Hare on github, updating..."
+        echo -e "${B_GREEN}Found a new version of Multi-Hare on github, updating..."
         [ -n "$(git status --porcelain)" ] && {
             git stash push -m 'local changes stashed before self update' --quiet
         }
@@ -305,7 +309,7 @@ link_mmu_plugins() {
         mkdir -p "${KLIPPER_HOME}/klippy/extras/mmu"
         for dir in extras extras/mmu; do
             for file in ${SRCDIR}/${dir}/*.py; do
-                ln -sf "$file" "${KLIPPER_HOME}/klippy/${dir}/$(basename "$file")"
+                    ln -sf "$file" "${KLIPPER_HOME}/klippy/${dir}/$(basename "$file")"
             done
         done
     else
@@ -1386,21 +1390,21 @@ install_update_manager() {
     if [ -f "${file}" ]; then
         restart=0
 
-        update_section=$(grep -c '\[update_manager happy-hare\]' ${file} || true)
+        update_section=$(grep -c '\[update_manager multi-hare\]' ${file} || true)
         if [ "${update_section}" -eq 0 ] && [ "$OS_TYPE" != "$OS_FLYOS_FAST" ]; then
             echo "" >> "${file}"
             while read -r line; do
                 echo -e "${line}" >> "${file}"
             done < "${SRCDIR}/moonraker_update.txt"
             echo "" >> "${file}"
-            # The path for Happy-Hare on MIPS is /usr/data/Happy-Hare
+            # The path for Multi-Hare on MIPS is /usr/data/Multi-Hare
             if [ "$OS_TYPE" = "$OS_CREALITY_K1" ]; then
-                sed -i 's|path: ~/Happy-Hare|path: /usr/data/Happy-Hare|' "${file}"
-                echo -e "${INFO}Update Happy-Hare path for MIPS architecture."
+                sed -i 's|path: ~/Multi-Hare|path: /usr/data/Multi-Hare|' "${file}"
+                echo -e "${INFO}Update Multi-Hare path for MIPS architecture."
             fi
             restart=1
         else
-            echo -e "${WARNING}[update_manager happy-hare] already exists in moonraker.conf - skipping install"
+            echo -e "${WARNING}[update_manager multi-hare] already exists in moonraker.conf - skipping install"
         fi
 
         # Quick "catch-up" update for new mmu_service
@@ -1438,12 +1442,12 @@ uninstall_update_manager() {
     if [ -f "${file}" ]; then
         restart=0
 
-        update_section=$(grep -c '\[update_manager happy-hare\]' ${file} || true)
+        update_section=$(grep -c '\[update_manager multi-hare\]' ${file} || true)
         if [ "${update_section}" -eq 0 ]; then
-            echo -e "${INFO}[update_manager happy-hare] not found in moonraker.conf - skipping removal"
+            echo -e "${INFO}[update_manager multi-hare] not found in moonraker.conf - skipping removal"
         else
             cat "${file}" | sed -e " \
-                /\[update_manager happy-hare\]/,+6 d; \
+                /\[update_manager multi-hare\]/,+6 d; \
                     " > "${file}.new" && mv "${file}.new" "${file}"
             restart=1
         fi
@@ -2890,7 +2894,7 @@ else
             uninstall_update_manager
             uninstall_printer_includes
             uninstall_config_files
-            echo -e "${INFO}Uninstall complete except for the Happy-Hare directory - you can now safely delete that as well"
+            echo -e "${INFO}Uninstall complete except for the Multi-Hare directory - you can now safely delete that as well"
             ;;
         n)
             echo -e "${INFO}Well that was a close call!  Everything still intact"
@@ -2915,5 +2919,5 @@ if [ "$UNINSTALL" -eq 1 ]; then
     echo -e "${sad_logo}"
 else
     echo -e "${TITLE}Done."
-    echo -e "$(get_logo "Happy Hare ${F_VERSION} Ready...")"
+    echo -e "$(get_logo "Multi-Hare ${F_VERSION} Ready...")"
 fi

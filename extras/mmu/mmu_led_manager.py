@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-# Happy Hare MMU Software
-#
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
 #
 # Goal: Manager class to centralize mmu_led operations accross all mmu_units
 #
@@ -10,16 +8,19 @@
 #   MMU_SET_LED
 #   MMU_LED
 #
+# Original Happy Hare Copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
 import logging
 
-# Happy Hare imports
+# Multi-Hare imports
 from ..mmu_leds  import MmuLeds
 
 # MMU subcomponent clases

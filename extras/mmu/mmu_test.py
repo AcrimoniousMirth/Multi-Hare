@@ -1,13 +1,15 @@
-# Happy Hare MMU Software
-#
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
 #
 # Goal: Define internal test operations to aid development. Note these tests are "raw"
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+# Original Happy Hare copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
+#
+# (\_/)                      (\_/)
+# ( *,*)                    (^u^ )
+# (")_(") Multi Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
@@ -15,7 +17,7 @@ import random, logging, math
 
 from ..mmu_sensors import MmuSensors
 
-# Happy Hare imports
+# Multi-Hare imports
 from ..            import mmu_machine
 from ..mmu_machine import MmuToolHead
 
@@ -75,7 +77,7 @@ class MmuTest:
         self.mmu = mmu
         mmu.gcode.register_command('_MMU_TEST', self.cmd_MMU_TEST, desc = self.cmd_MMU_TEST_help) # Internal for testing
 
-    cmd_MMU_TEST_help = "Internal Happy Hare developer tests"
+    cmd_MMU_TEST_help = "Internal Multi-Hare developer tests"
     def cmd_MMU_TEST(self, gcmd):
         self.mmu.log_to_file(gcmd.get_commandline())
         if self.mmu.check_if_disabled(): return

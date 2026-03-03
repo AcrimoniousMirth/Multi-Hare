@@ -1,5 +1,7 @@
-# Happy Hare MMU Software
-# Utility classes for Happy Hare MMU
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
+#
+# Utility classes for Multi-Hare MMU
 #
 # DebugStepperMovement
 # Goal: Internal testing class for debugging synced movement
@@ -7,12 +9,13 @@
 # PurgeVolCalculator
 # Goal: Purge volume calculator based on color change
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Original Happy Hare Copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #

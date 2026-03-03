@@ -1,14 +1,17 @@
-# Happy Hare MMU Software
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
+#
 # Main module
 #
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Original Happy Hare copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
 #
 # Goal: Main control class for any Klipper based MMU (includes filament driver/gear control)
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
@@ -20,7 +23,7 @@ import chelper
 from ..homing                   import Homing, HomingMove
 from ..tmc                      import TMCCommandHelper
 
-# Happy Hare imports
+# Multi-Hare imports
 from ..                         import mmu_machine
 from ..mmu_machine              import MmuToolHead
 from ..mmu_sensors              import MmuRunoutHelper
@@ -40,7 +43,7 @@ from .mmu_environment_manager   import MmuEnvironmentManager
 
 # Main klipper module
 class Mmu:
-    VERSION = 3.42 # When this is revved, Happy Hare will instruct users to re-run ./install.sh. Sync with install.sh!
+    VERSION = 0.1 # Multi-Hare specialized version
 
     BOOT_DELAY = 2.5 # Delay before running bootup tasks
 
@@ -80,11 +83,11 @@ class Mmu:
 
     FORM_TIP_NONE = 0               # Skip tip forming
     FORM_TIP_SLICER = 1             # Slicer forms tips
-    FORM_TIP_STANDALONE = 2         # Happy Hare forms tips
+    FORM_TIP_STANDALONE = 2         # Multi-Hare forms tips
 
     PURGE_NONE = 0                  # Skip purging after load
     PURGE_SLICER = 1                # Slicer purges on wipetower
-    PURGE_STANDALONE = 2            # Happy Hare purges
+    PURGE_STANDALONE = 2            # Multi-Hare purges
 
     ACTION_IDLE = 0
     ACTION_LOADING = 1
@@ -246,7 +249,7 @@ class Mmu:
                   ('tan','#D2B48C'), ('teal','#008080'), ('thistle','#D8BFD8'), ('tomato','#FF6347'), ('turquoise','#40E0D0'), ('violet','#EE82EE'),
                   ('wheat','#F5DEB3'), ('white','#FFFFFF'), ('whitesmoke','#F5F5F5'), ('yellow','#FFFF00'), ('yellowgreen','#9ACD32')]
 
-    UPGRADE_REMINDER = "Sorry but Happy Hare requires you to re-run this to complete the update:\ncd ~/Happy-Hare\n./install.sh\nMore details: https://github.com/moggieuk/Happy-Hare/wiki/Upgrade-Notice"
+    UPGRADE_REMINDER = "Multi-Hare update: Please ensure you are tracking the https://github.com/AcrimoniousMirth/Multi-Hare fork."
 
     def __init__(self, config):
         self.config = config
@@ -282,7 +285,7 @@ class Mmu:
         self.printer.register_event_handler("klippy:ready", self.handle_ready)
 
         # Instruct users to re-run ./install.sh if version number changes
-        self.config_version = config.getfloat('happy_hare_version', 2.2) # v2.2 was the last release before versioning
+        self.config_version = config.getfloat('multi_hare_version', 2.2) # v2.2 was the last release before versioning
         if self.config_version is not None and self.config_version < self.VERSION:
             raise self.config.error("Looks like you upgraded (v%s -> v%s)?\n%s" % (self.config_version, self.VERSION, self.UPGRADE_REMINDER))
 
@@ -500,7 +503,7 @@ class Mmu:
 
         # Klipper tuning (aka hacks)
         # Timer too close is a catch all error, however it has been found to occur on some systems during homing and probing
-        # operations especially so with CANbus connected mcus. Happy Hare using many homing moves for reliable extruder loading
+        # operations especially so with CANbus connected mcus. Multi-Hare using many homing moves for reliable extruder loading
         # and unloading and enabling this option affords klipper more tolerance and avoids this dreaded error.
         self.update_trsync = config.getint('update_trsync', 0, minval=0, maxval=1)
 
@@ -598,6 +601,7 @@ class Mmu:
         self.gcode.register_command('MMU_SELECT', self.cmd_MMU_SELECT, desc = self.cmd_MMU_SELECT_help)
         self.gcode.register_command('MMU_SELECT_BYPASS', self.cmd_MMU_SELECT_BYPASS, desc = self.cmd_MMU_SELECT_BYPASS_help) # Alias for MMU_SELECT BYPASS=1
         self.gcode.register_command('MMU_PRELOAD', self.cmd_MMU_PRELOAD, desc = self.cmd_MMU_PRELOAD_help)
+        self.gcode.register_command('MMU_SET_SYSTEM', self.cmd_MMU_SET_SYSTEM, desc = self.cmd_MMU_SET_SYSTEM_help)
         self.gcode.register_command('MMU_CHANGE_TOOL', self.cmd_MMU_CHANGE_TOOL, desc = self.cmd_MMU_CHANGE_TOOL_help)
         # TODO Currently cannot not registered directly as Tx commands because cannot attach color/spool_id required by Mailsail
         #for tool in range(self.num_gates):
@@ -703,6 +707,9 @@ class Mmu:
         logging.info("MMU: Hardware Initialization -------------------------------")
         self.homing_extruder = self.mmu_machine.homing_extruder
 
+        # Load Multi-System configuration
+        self._setup_multi_system(config)
+
         # Dynamically instantiate the selector class
         self.selector = globals()[self.mmu_machine.selector_type](self)
         if not isinstance(self.selector, BaseSelector):
@@ -727,6 +734,55 @@ class Mmu:
         # Load espooler if it exists
         self.espooler = self.printer.lookup_object('mmu_espooler mmu_espooler', None)
 
+    def _setup_multi_system(self, config):
+        self.systems = {}
+        systems_path = os.path.expanduser("~/printer_data/config/mmu/base/systems.cfg")
+        if not os.path.exists(systems_path):
+            systems_path = os.path.expanduser("~/klipper_config/mmu/base/systems.cfg")
+        
+        # Fallback for the path provided by the user in this specific environment
+        if not os.path.exists(systems_path):
+            systems_path = "/Users/sam/Downloads/Toolchanger Work/config/mmu/base/systems.cfg"
+
+        try:
+            import configparser
+            cp = configparser.ConfigParser()
+            cp.read(systems_path)
+            for section in cp.sections():
+                if section.startswith('system_'):
+                    system_id = int(section.split('_')[1])
+                    self.systems[system_id] = {
+                        'tools': [int(t.strip()) for t in cp.get(section, 'tools').split(',')],
+                        'toolhead': cp.get(section, 'toolhead'),
+                        'extruder': cp.get(section, 'extruder'),
+                        'pre_gate': [s.strip() for s in cp.get(section, 'pre_gate').split(',')],
+                        'gate': cp.get(section, 'gate'),
+                        'extruder_sensor': cp.get(section, 'extruder_sensor'),
+                        'toolhead_sensor': cp.get(section, 'toolhead_sensor'),
+                        'tension_sensor': cp.get(section, 'tension_sensor'),
+                    }
+            logging.info("Multi-Hare: Loaded %d systems from %s" % (len(self.systems), systems_path))
+        except Exception as e:
+            logging.error("Multi-Hare: Failed to load systems.cfg: %s" % str(e))
+            # Fallback to single system if loading fails
+            self.systems = {0: {'tools': list(range(self.num_gates)), 'toolhead': 'T0', 'extruder': 'extruder'}}
+
+    def get_system_id(self, gate):
+        if gate == self.TOOL_GATE_BYPASS:
+            # Bypass logic might need refined system lookup, for now assume system 1 or 0
+            return 1 if self.num_gates > 1 else 0
+        for sys_id, sys_data in self.systems.items():
+            if gate in sys_data['tools']:
+                return sys_id
+        return 0 # Default to system 0
+
+    def get_system(self, gate):
+        sys_id = self.get_system_id(gate)
+        return self.systems.get(sys_id)
+
+    def get_active_system(self):
+        return self.get_system(self.gate_selected)
+
     def _setup_logging(self):
         # Setup background file based logging before logging any messages
         if self.mmu_logger is None and self.log_file_level >= 0:
@@ -735,7 +791,7 @@ class Mmu:
             if dirname is None:
                 mmu_log = '/tmp/mmu.log'
             else:
-                mmu_log = dirname + '/mmu.log'
+                mmu_log = dirname + '/multi-hare.log'
             logging.info("MMU: Log: %s" % mmu_log)
             self.mmu_logger = MmuLogger(mmu_log)
             self.mmu_logger.log("\n\n\nMMU Startup -----------------------------------------------\n")
@@ -2109,7 +2165,7 @@ class Mmu:
         detail = gcmd.get_int('DETAIL', 0, minval=0, maxval=1)
         on_off = lambda x: "ON" if x else "OFF"
 
-        msg = "MMU: Happy Hare %s running %s v%s" % (self._fversion(self.config_version), self.mmu_machine.mmu_vendor, self.mmu_machine.mmu_version_string)
+        msg = "MMU: Multi-Hare %s running %s v%s" % (self._fversion(self.config_version), self.mmu_machine.mmu_vendor, self.mmu_machine.mmu_version_string)
         msg += " with %d gates" % self.num_gates
         msg += (" over %d units" % self.mmu_machine.num_units) if self.mmu_machine.num_units > 1 else ""
         msg += " (%s) " % ("DISABLED" if not self.is_enabled else "PAUSED" if self.is_mmu_paused() else "OPERATIONAL")
@@ -2173,13 +2229,13 @@ class Mmu:
             # Purging
             if self.force_purge_standalone:
                 if self.purge_macro:
-                    msg += "\n- Purging is always managed by Happy Hare using '%s' macro with extruder purging current of %d%%" % (
+                    msg += "\n- Purging is always managed by Multi-Hare using '%s' macro with extruder purging current of %d%%" % (
                         self.purge_macro, self.extruder_purge_current)
                 else:
                     msg += "\n- No purging is performed!"
             else:
                 if self.purge_macro:
-                    msg += "\n- Purging is managed by slicer when printing. Otherwise by Happy Hare using '%s' macro with extruder purging current of %d%% when not printing" % (
+                    msg += "\n- Purging is managed by slicer when printing. Otherwise by Multi-Hare using '%s' macro with extruder purging current of %d%% when not printing" % (
                         self.purge_macro, self.extruder_purge_current)
                 else:
                     msg += "\n- Purging is managed by slicer only when printing"
@@ -2208,13 +2264,13 @@ class Mmu:
             # Tip forming
             if self.force_form_tip_standalone:
                 if self.form_tip_macro:
-                    msg += "\n- Tip is always formed by Happy Hare using '%s' macro after initial retract of %s with extruder current of %d%%" % (
+                    msg += "\n- Tip is always formed by Multi-Hare using '%s' macro after initial retract of %s with extruder current of %d%%" % (
                         self.form_tip_macro, self._f_calc("toolchange_retract"), self.extruder_form_tip_current)
                 else:
                     msg += "\n- No tip forming is performed!"
             else:
                 if self.form_tip_macro:
-                    msg += "\n- Tip is formed by slicer when printing. Otherwise by Happy Hare using '%s' macro after initial retract of %s with extruder current of %d%%" % (
+                    msg += "\n- Tip is formed by slicer when printing. Otherwise by Multi-Hare using '%s' macro after initial retract of %s with extruder current of %d%%" % (
                         self.form_tip_macro, self._f_calc("toolchange_retract"), self.extruder_form_tip_current)
                 else:
                     msg += "\n- Tip is formed by slicer only when printing"
@@ -3121,7 +3177,7 @@ class Mmu:
             self.log_trace("_on_print_start(->printing)")
             self.wrap_gcode_command("SET_GCODE_VARIABLE MACRO=%s VARIABLE=min_lifted_z VALUE=0" % self.park_macro) # Sequential printing movement "floor"
             self.wrap_gcode_command("SET_GCODE_VARIABLE MACRO=%s VARIABLE=next_pos VALUE=False" % self.park_macro)
-            msg = "Happy Hare initialized ready for print"
+            msg = "Multi-Hare initialized ready for print"
             if self.filament_pos == self.FILAMENT_POS_LOADED:
                 msg += " (initial tool %s loaded)" % self.selected_tool_string()
             else:
@@ -3301,7 +3357,7 @@ class Mmu:
             if not self.saved_toolhead_operation:
                 # Save toolhead position
 
-                # This is paranoia so I can be absolutely sure that Happy Hare leaves toolhead the same way when we are done
+                # This is paranoia so I can be absolutely sure that Multi-Hare leaves toolhead the same way when we are done
                 gcode_pos = self.gcode_move.get_status(eventtime)['gcode_position']
                 toolhead_gcode_pos = " ".join(["%s:%.1f" % (a, v) for a, v in zip("XYZE", gcode_pos)])
                 self.log_debug("Saving toolhead gcode state and position (%s) for %s" % (toolhead_gcode_pos, operation))
@@ -3934,7 +3990,7 @@ class Mmu:
         slicer = gcmd.get_int('SLICER', 0, minval=0, maxval=1)
         callbacks = gcmd.get_int('CALLBACKS', 0, minval=0, maxval=1)
         steps = gcmd.get_int('STEPS', 0, minval=0, maxval=1)
-        msg = "Happy Hare MMU commands: (use MMU_HELP SLICER=1 CALLBACKS=1 TESTING=1 STEPS=1 for full command set)\n"
+        msg = "Multi-Hare MMU commands: (use MMU_HELP SLICER=1 CALLBACKS=1 TESTING=1 STEPS=1 for full command set)\n"
         tesing_msg = "\nCalibration and testing commands:\n"
         slicer_msg = "\nPrint start/end or slicer macros (defined in mmu_software.cfg\n"
         callback_msg = "\nCallbacks (defined in mmu_sequence.cfg, mmu_state.cfg)\n"
@@ -6400,7 +6456,48 @@ class Mmu:
         elif tool == self.TOOL_GATE_BYPASS:
             self.select_bypass()
 
+    def cmd_MMU_SET_SYSTEM(self, gcmd):
+        system_id = gcmd.get_int('SYSTEM', None)
+        gate = gcmd.get_int('GATE', None)
+        
+        if system_id is None and gate is None:
+            active_sys = self.get_active_system()
+            gcmd.respond_info("Active Multi-Hare System: %s" % (active_sys.get('toolhead') if active_sys else "None"))
+            return
+
+        if gate is not None:
+            system_id = self.get_system_id(gate)
+        
+        if system_id is not None:
+             self.mmu_toolhead.update_active_system(system_id)
+             self._update_active_tmcs()
+             gcmd.respond_info("Multi-Hare System set to %d" % system_id)
+        else:
+             gcmd.respond_info("Invalid system or gate specified")
+
+    def _update_active_tmcs(self):
+        sys = self.get_active_system()
+        if not sys: return
+        
+        gear_name = sys.get('gate', mmu_machine.GEAR_STEPPER_CONFIG)
+        extruder_name = sys.get('extruder', 'extruder')
+        
+        self.gear_tmc = self.extruder_tmc = None
+        for chip in mmu_machine.TMC_CHIPS:
+            if self.gear_tmc is None:
+                self.gear_tmc = self.printer.lookup_object('%s %s' % (chip, gear_name), None)
+            if self.extruder_tmc is None:
+                self.extruder_tmc = self.printer.lookup_object("%s %s" % (chip, extruder_name), None)
+        
+        if self.gear_tmc:
+             self.gear_default_run_current = self.gear_tmc.get_status(0)['run_current']
+        if self.extruder_tmc:
+             self.extruder_default_run_current = self.extruder_tmc.get_status(0)['run_current']
+        
+        self.log_debug("Multi-Hare: Toggled TMCs to Gear:%s Extruder:%s" % (gear_name, extruder_name))
+
     def select_gate(self, gate):
+        self._update_active_tmcs()
         try:
 
             if gate == self.gate_selected:
@@ -6460,6 +6557,7 @@ class Mmu:
             self.sensor_manager.reset_active_unit(new_unit)
 
         self.sensor_manager.reset_active_gate(self.gate_selected) # Call after unit_selected is set
+        self.mmu_toolhead.update_active_system() # Update active extruder/toolhead system
         self.sync_feedback_manager.set_default_rd() # Will always set rotation_distance
 
         self.save_variable(self.VARS_MMU_GATE_SELECTED, self.gate_selected, write=True)
@@ -9034,6 +9132,7 @@ class Mmu:
             self.handle_mmu_error(str(ee))
 
     cmd_MMU_PRELOAD_help = "Preloads filament at specified or current gate"
+    cmd_MMU_SET_SYSTEM_help = "Manually set the active toolhead system"
     def cmd_MMU_PRELOAD(self, gcmd):
         self.log_to_file(gcmd.get_commandline())
         if self.check_if_disabled(): return

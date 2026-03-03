@@ -1,19 +1,21 @@
-# Happy Hare MMU Software
-#
-# Copyright (C) 2022-2026  moggieuk#6538 (discord)
-#                          moggieuk@hotmail.com
+# Multi-Hare MMU Software - A modified version of Happy Hare for multi toolhead integration
+# Modified by AcrimoniousMirth
 #
 # Goal: Manager to centralize mmu_sensor operations
 #
-# (\_/)
-# ( *,*)
-# (")_(") Happy Hare Ready
+# Original Happy Hare Copyright:
+#     Copyright (C) 2022-2026  moggieuk#6538 (discord)
+#                              moggieuk@hotmail.com
+#
+#  (\_/)                      (\_/)
+#  ( *,*)                    (^u^ )
+#  (")_(") Multi-Hare Ready (")_(")
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
 import random, logging, math, re
 
-# Happy Hare imports
+# Multi-Hare imports
 from ..mmu_sensors import MmuRunoutHelper
 
 # MMU subcomponent clases
@@ -99,16 +101,29 @@ class MmuSensorManager:
 
     # Reset the "viewable" sensors used in UI (unit must be updated first)
     def reset_active_gate(self, gate):
-        sensor_name_map = {
-            self.mmu.SENSOR_PRE_GATE_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_PRE_GATE_PREFIX, gate),
-            self.mmu.SENSOR_GEAR_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_GEAR_PREFIX, gate),
-            self.mmu.SENSOR_GATE: self.get_mapped_endstop_name(self.mmu.SENSOR_GATE),
-            self.mmu.SENSOR_COMPRESSION: self.get_mapped_endstop_name(self.mmu.SENSOR_COMPRESSION),
-            self.mmu.SENSOR_TENSION: self.get_mapped_endstop_name(self.mmu.SENSOR_TENSION),
-            self.mmu.SENSOR_PROPORTIONAL: self.get_mapped_endstop_name(self.mmu.SENSOR_PROPORTIONAL),
-            self.mmu.SENSOR_EXTRUDER_ENTRY: self.mmu.SENSOR_EXTRUDER_ENTRY,
-            self.mmu.SENSOR_TOOLHEAD: self.mmu.SENSOR_TOOLHEAD
-        }
+        sys = self.mmu.get_system(gate)
+        if sys:
+            sensor_name_map = {
+                self.mmu.SENSOR_PRE_GATE_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_PRE_GATE_PREFIX, gate),
+                self.mmu.SENSOR_GEAR_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_GEAR_PREFIX, gate),
+                self.mmu.SENSOR_GATE: sys.get('gate'),
+                self.mmu.SENSOR_COMPRESSION: self.get_mapped_endstop_name(self.mmu.SENSOR_COMPRESSION),
+                self.mmu.SENSOR_TENSION: sys.get('tension_sensor'),
+                self.mmu.SENSOR_PROPORTIONAL: self.get_mapped_endstop_name(self.mmu.SENSOR_PROPORTIONAL),
+                self.mmu.SENSOR_EXTRUDER_ENTRY: sys.get('extruder_sensor'),
+                self.mmu.SENSOR_TOOLHEAD: sys.get('toolhead_sensor')
+            }
+        else:
+            sensor_name_map = {
+                self.mmu.SENSOR_PRE_GATE_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_PRE_GATE_PREFIX, gate),
+                self.mmu.SENSOR_GEAR_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_GEAR_PREFIX, gate),
+                self.mmu.SENSOR_GATE: self.get_mapped_endstop_name(self.mmu.SENSOR_GATE),
+                self.mmu.SENSOR_COMPRESSION: self.get_mapped_endstop_name(self.mmu.SENSOR_COMPRESSION),
+                self.mmu.SENSOR_TENSION: self.get_mapped_endstop_name(self.mmu.SENSOR_TENSION),
+                self.mmu.SENSOR_PROPORTIONAL: self.get_mapped_endstop_name(self.mmu.SENSOR_PROPORTIONAL),
+                self.mmu.SENSOR_EXTRUDER_ENTRY: self.mmu.SENSOR_EXTRUDER_ENTRY,
+                self.mmu.SENSOR_TOOLHEAD: self.mmu.SENSOR_TOOLHEAD
+            }
         self.viewable_sensors = {
             name: self.all_sensors.get(mapped_name)
             for name, mapped_name in sensor_name_map.items()
@@ -291,13 +306,14 @@ class MmuSensorManager:
     def _get_sensors(self, pos, gate, position_condition):
         result = {}
         if gate >= 0:
+            sys = self.mmu.get_system(gate)
             # Note: For gear sensor the position of POS_HOMED_GATE is only valid if is not usually triggered (i.e. parking retract)
             sensor_selection = [
                 (self.get_gate_sensor_name(self.mmu.SENSOR_PRE_GATE_PREFIX, gate), None),
                 (self.get_gate_sensor_name(self.mmu.SENSOR_GEAR_PREFIX, gate), self.mmu.FILAMENT_POS_HOMED_GATE if self.mmu.gate_homing_endstop == self.mmu.SENSOR_GEAR_PREFIX and self.mmu.gate_parking_distance <= 0 else None),
-                (self.mmu.SENSOR_GATE, self.mmu.FILAMENT_POS_HOMED_GATE),
-                (self.mmu.SENSOR_EXTRUDER_ENTRY, self.mmu.FILAMENT_POS_HOMED_ENTRY),
-                (self.mmu.SENSOR_TOOLHEAD, self.mmu.FILAMENT_POS_HOMED_TS),
+                (sys.get('gate') if sys else self.mmu.SENSOR_GATE, self.mmu.FILAMENT_POS_HOMED_GATE),
+                (sys.get('extruder_sensor') if sys else self.mmu.SENSOR_EXTRUDER_ENTRY, self.mmu.FILAMENT_POS_HOMED_ENTRY),
+                (sys.get('toolhead_sensor') if sys else self.mmu.SENSOR_TOOLHEAD, self.mmu.FILAMENT_POS_HOMED_TS),
             ]
             for name, position_check in sensor_selection:
                 sensor = self.sensors.get(name, None)
