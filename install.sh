@@ -1070,8 +1070,18 @@ copy_config_files() {
                 continue
             else
                 if [ "${file}" == "mmu_parameters.cfg" ] || [ "${file}" == "mmu_macro_vars.cfg" ]; then
+                    echo -n -e "${INFO}Configuration file ${file} already exists. "
+                    if [ "$(prompt_yn "Skip update and keep your current version")" == "y" ]; then
+                        echo -e "${INFO}Skipping update of ${file}"
+                        continue
+                    fi
                     echo -e "${INFO}Upgrading configuration file ${file}"
                 else
+                    echo -n -e "${INFO}Configuration file ${file} already exists. "
+                    if [ "$(prompt_yn "Skip installation and keep your current version")" == "y" ]; then
+                        echo -e "${INFO}Skipping installation of ${file}"
+                        continue
+                    fi
                     echo -e "${INFO}Installing configuration file ${file}"
                 fi
                 mv ${dest} ${next_dest} # Backup old config file
@@ -1264,6 +1274,13 @@ copy_config_files() {
     for file in `cd ${SRCDIR}/config/optional ; ls *.cfg`; do
         src=${SRCDIR}/config/optional/${file}
         dest=${mmu_dir}/optional/${file}
+        if [ -f "${dest}" ]; then
+            echo -n -e "${INFO}Optional configuration file ${file} already exists. "
+            if [ "$(prompt_yn "Skip update and keep your current version")" == "y" ]; then
+                echo -e "${INFO}Skipping update of ${file}"
+                continue
+            fi
+        fi
         ln -sf ${src} ${dest}
     done
 
@@ -1283,6 +1300,11 @@ copy_config_files() {
         dest=${mmu_dir}/addons/${file}
         if [ -f "${dest}" ]; then
             if ! echo "$file" | grep -E -q ".*_hw\.cfg.*"; then
+                echo -n -e "${INFO}Addon configuration file ${file} already exists. "
+                if [ "$(prompt_yn "Skip update and keep your current version")" == "y" ]; then
+                    echo -e "${INFO}Skipping update of ${file}"
+                    continue
+                fi
                 echo -e "${INFO}Upgrading configuration file ${file}"
                 update_copy_file ${src} ${dest} "variable_"
             else

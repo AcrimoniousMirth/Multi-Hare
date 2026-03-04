@@ -633,20 +633,25 @@ class MmuSensors:
         event_delay = config.get('event_delay', 0.5)
 
         # Setup "mmu_pre_gate" sensors...
-        for gate in range(23):
+        for gate in range(48): # Support up to 48 gates (matches range in other components)
             switch_pin = config.get('pre_gate_switch_pin_%d' % gate, None)
             if switch_pin:
                 self._create_mmu_sensor(config, Mmu.SENSOR_PRE_GATE_PREFIX, gate, switch_pin, event_delay, insert=True, remove=True, runout=True, insert_remove_in_print=True)
 
-        # Setup single "mmu_gate" sensor(s)...
-        switch_pins = list(config.getlist('gate_switch_pin', []))
-        if switch_pins:
-            if len(switch_pins) not in [1, num_units]:
-                raise config.error("Invalid number of pins specified with gate_switch_pin. Expected 1 or %d but counted %d" % (num_units, len(switch_pins)))
-            self._create_mmu_sensor(config, Mmu.SENSOR_GATE, None, switch_pins, event_delay, runout=True)
+        # Setup "mmu_gate" sensor(s)...
+        gate_pins = []
+        for i in range(num_units):
+            p = config.get('gate_switch_pin_%d' % i, None)
+            if p: gate_pins.append(p)
+        if not gate_pins:
+            gate_pins = list(config.getlist('gate_switch_pin', []))
+        if gate_pins:
+            if len(gate_pins) not in [1, num_units]:
+                raise config.error("Invalid number of pins specified with gate_switch_pin. Expected 1 or %d but counted %d" % (num_units, len(gate_pins)))
+            self._create_mmu_sensor(config, Mmu.SENSOR_GATE, None, gate_pins, event_delay, runout=True)
 
         # Setup "mmu_gear" sensors...
-        for gate in range(23):
+        for gate in range(48):
             switch_pin = config.get('post_gear_switch_pin_%d' % gate, None)
             if switch_pin:
                 a_range = config.getfloatlist('post_gear_analog_range_%d' % gate, None, count=2)
@@ -657,15 +662,27 @@ class MmuSensors:
                 else:
                     self._create_mmu_sensor(config, Mmu.SENSOR_GEAR_PREFIX, gate, switch_pin, event_delay, runout=True)
 
-        # Setup single extruder (entrance) sensor...
-        switch_pin = config.get('extruder_switch_pin', None)
-        if switch_pin:
-            self._create_mmu_sensor(config, Mmu.SENSOR_EXTRUDER_ENTRY, None, switch_pin, event_delay, insert=True, runout=True)
+        # Setup extruder (entrance) sensor(s)...
+        extruder_pins = []
+        for i in range(num_units):
+            p = config.get('extruder_switch_pin_%d' % i, None)
+            if p: extruder_pins.append(p)
+        if not extruder_pins:
+            p = config.get('extruder_switch_pin', None)
+            if p: extruder_pins = [p]
+        if extruder_pins:
+            self._create_mmu_sensor(config, Mmu.SENSOR_EXTRUDER_ENTRY, None, extruder_pins, event_delay, insert=True, runout=True)
 
-        # Setup single toolhead sensor...
-        switch_pin = config.get('toolhead_switch_pin', None)
-        if switch_pin:
-            self._create_mmu_sensor(config, Mmu.SENSOR_TOOLHEAD, None, switch_pin, event_delay)
+        # Setup toolhead sensor(s)...
+        toolhead_pins = []
+        for i in range(num_units):
+            p = config.get('toolhead_switch_pin_%d' % i, None)
+            if p: toolhead_pins.append(p)
+        if not toolhead_pins:
+            p = config.get('toolhead_switch_pin', None)
+            if p: toolhead_pins = [p]
+        if toolhead_pins:
+            self._create_mmu_sensor(config, Mmu.SENSOR_TOOLHEAD, None, toolhead_pins, event_delay)
 
         # For Qidi printers or any other that use a hall_filament_width_sensor as an endstop
         hall_sensor_endstop = config.get('hall_sensor_endstop', None)
@@ -695,16 +712,27 @@ class MmuSensors:
             self.sensors[target_name] = s            
 
         # Setup motor syncing feedback sensors...
-        switch_pins = list(config.getlist('sync_feedback_tension_pin', []))
-        if switch_pins:
-            if len(switch_pins) not in [1, num_units]:
-                raise config.error("Invalid number of pins specified with sync_feedback_tension_pin. Expected 1 or %d but counted %d" % (num_units, len(switch_pins)))
-            self._create_mmu_sensor(config, Mmu.SENSOR_TENSION, None, switch_pins, 0, clog=True, tangle=True, button_handler=self._sync_tension_callback)
-        switch_pins = list(config.getlist('sync_feedback_compression_pin', []))
-        if switch_pins:
-            if len(switch_pins) not in [1, num_units]:
-                raise config.error("Invalid number of pins specified with sync_feedback_compression_pin. Expected 1 or %d but counted %d" % (num_units, len(switch_pins)))
-            self._create_mmu_sensor(config, Mmu.SENSOR_COMPRESSION, None, switch_pins, 0, clog=True, tangle=True, button_handler=self._sync_compression_callback)
+        tension_pins = []
+        for i in range(num_units):
+            p = config.get('sync_feedback_tension_pin_%d' % i, None)
+            if p: tension_pins.append(p)
+        if not tension_pins:
+            tension_pins = list(config.getlist('sync_feedback_tension_pin', []))
+        if tension_pins:
+            if len(tension_pins) not in [1, num_units]:
+                raise config.error("Invalid number of pins specified with sync_feedback_tension_pin. Expected 1 or %d but counted %d" % (num_units, len(tension_pins)))
+            self._create_mmu_sensor(config, Mmu.SENSOR_TENSION, None, tension_pins, 0, clog=True, tangle=True, button_handler=self._sync_tension_callback)
+
+        compression_pins = []
+        for i in range(num_units):
+            p = config.get('sync_feedback_compression_pin_%d' % i, None)
+            if p: compression_pins.append(p)
+        if not compression_pins:
+            compression_pins = list(config.getlist('sync_feedback_compression_pin', []))
+        if compression_pins:
+            if len(compression_pins) not in [1, num_units]:
+                raise config.error("Invalid number of pins specified with sync_feedback_compression_pin. Expected 1 or %d but counted %d" % (num_units, len(compression_pins)))
+            self._create_mmu_sensor(config, Mmu.SENSOR_COMPRESSION, None, compression_pins, 0, clog=True, tangle=True, button_handler=self._sync_compression_callback)
         
         # Setup analog (proportional) sync feedback
         # Uses single analog input; value scaled in [-1, 1]

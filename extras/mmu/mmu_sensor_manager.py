@@ -44,6 +44,8 @@ class MmuSensorManager:
                 sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TENSION, i))
                 sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_COMPRESSION, i))
                 sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_PROPORTIONAL, i))
+                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_EXTRUDER_ENTRY, i))
+                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TOOLHEAD, i))
         sensor_names.extend([
             self.mmu.SENSOR_EXTRUDER_ENTRY,
             self.mmu.SENSOR_TOOLHEAD
@@ -69,6 +71,8 @@ class MmuSensorManager:
                 self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_GATE, i))
                 self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_COMPRESSION, i))
                 self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TENSION, i))
+                self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_EXTRUDER_ENTRY, i))
+                self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TOOLHEAD, i))
         self.endstop_names.extend([
             self.mmu.SENSOR_EXTRUDER_ENTRY,
             self.mmu.SENSOR_TOOLHEAD
