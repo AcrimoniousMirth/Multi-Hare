@@ -6815,12 +6815,10 @@ class Mmu:
         except MmuError as ee:
             self.handle_mmu_error(str(ee))
 
-    cmd_MMU_SELECT_help = "Select the specified logical tool (following TTG map) or physical gate"
     def cmd_MMU_SELECT(self, gcmd):
         self.log_to_file(gcmd.get_commandline())
         if self.check_if_disabled(): return
         if self.check_if_not_homed(): return
-        if self.check_if_loaded(): return
         if self.check_if_not_calibrated(self.CALIBRATED_SELECTOR): return
         self._fix_started_state()
 
@@ -6829,6 +6827,20 @@ class Mmu:
         gate = gcmd.get_int('GATE', -1, minval=0, maxval=self.num_gates - 1)
         if tool == -1 and gate == -1 and bypass == -1:
             raise gcmd.error("Error on 'MMU_SELECT': missing TOOL, GATE or BYPASS")
+
+        # Resolve target gate
+        target_gate = gate
+        if tool != -1:
+            target_gate = self.ttg_map[tool]
+        elif bypass != -1:
+            target_gate = self.TOOL_GATE_BYPASS
+
+        # Only block if we are NOT switching to a different system
+        if self.gate_selected != self.TOOL_GATE_UNKNOWN and target_gate != self.TOOL_GATE_UNKNOWN:
+            if self.get_system_id(target_gate) == self.get_system_id(self.gate_selected):
+                if self.check_if_loaded(): return
+        else:
+            if self.check_if_loaded(): return
 
         try:
             with self.wrap_sync_gear_to_extruder():
