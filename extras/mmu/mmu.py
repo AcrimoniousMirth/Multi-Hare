@@ -736,13 +736,13 @@ class Mmu:
 
     def _setup_multi_system(self, config):
         self.systems = {}
-        systems_path = os.path.expanduser("~/printer_data/config/mmu/base/systems.cfg")
+        systems_path = os.path.expanduser("~/printer_data/config/mmu/base/systems.conf")
         if not os.path.exists(systems_path):
-            systems_path = os.path.expanduser("~/klipper_config/mmu/base/systems.cfg")
+            systems_path = os.path.expanduser("~/klipper_config/mmu/base/systems.conf")
         
         # Fallback for the path provided by the user in this specific environment
         if not os.path.exists(systems_path):
-            systems_path = "/Users/sam/Downloads/Toolchanger Work/config/mmu/base/systems.cfg"
+            systems_path = "/Users/sam/Downloads/Toolchanger Work/config/mmu/base/systems.conf"
 
         try:
             import configparser
