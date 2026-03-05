@@ -444,7 +444,7 @@ class Mmu:
         self.macro_toolhead_max_accel = config.getfloat('macro_toolhead_max_accel', 0, minval=0)
         self.macro_toolhead_min_cruise_ratio = config.getfloat('macro_toolhead_min_cruise_ratio', minval=0., below=1.)
         if self.macro_toolhead_max_accel == 0:
-            self.macro_toolhead_max_accel = config.get_section('printer').get_section('toolhead').getint('max_accel', 5000)
+            self.macro_toolhead_max_accel = config.getsection('printer').getint('max_accel', 5000)
 
         # eSpooler
         self.espooler_min_distance = config.getfloat('espooler_min_distance', 50., above=0)

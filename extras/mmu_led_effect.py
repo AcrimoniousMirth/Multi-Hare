@@ -107,7 +107,7 @@ class MmuLedEffect:
         for item in (i for i in items if i[0] != 'define_on'):
             config.fileconfig.set(section_to, item[0], item[1])
  
-        c = config.get_section(section_to)
+        c = config.getsection(section_to)
         led_effect = _ledEffect(c)
         logging.info("MMU: Created: %s on %s" % (c.get_name(), leds))
         self.printer.add_object(c.get_name(), led_effect) # Register _led_effect to stop it trying to be loaded by klipper

@@ -30,7 +30,7 @@ class VirtualMmuLedChain:
         # Create temporary config section just to access led helper
         led_section = "led %s" % self.name
         config.fileconfig.add_section(led_section)
-        led_config = config.get_section(led_section)
+        led_config = config.getsection(led_section)
         self.led_helper = klipper_led.LEDHelper(led_config, self.update_leds, sum(len(leds) for chain_name, leds in config_chains))
         config.fileconfig.remove_section(led_section)
 
