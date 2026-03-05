@@ -6815,6 +6815,7 @@ class Mmu:
         except MmuError as ee:
             self.handle_mmu_error(str(ee))
 
+    cmd_MMU_SELECT_help = "Select the specified logical tool (following TTG map) or physical gate"
     def cmd_MMU_SELECT(self, gcmd):
         self.log_to_file(gcmd.get_commandline())
         if self.check_if_disabled(): return
