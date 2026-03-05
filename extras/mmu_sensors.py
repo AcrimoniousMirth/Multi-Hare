@@ -737,7 +737,8 @@ class MmuSensors:
         # Uses single analog input; value scaled in [-1, 1]
         for i in range(12): # Support up to 12 indexed units/systems
             analog_pin = config.get('sync_feedback_analog_pin_%d' % i, None)
-            if analog_pin:
+            if analog_pin is not None:
+                # Even if pin is blank, we create the object to consume associated config options
                 name = "unit_%d_%s" % (i, Mmu.SENSOR_PROPORTIONAL)
                 self.sensors[name] = MmuProportionalSensor(config, name=name, unit=i)
 
