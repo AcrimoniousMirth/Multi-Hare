@@ -581,7 +581,15 @@ class MmuToolHead(toolhead.ToolHead, object):
                 self.config.fileconfig.set('extruder', option, value)
         
         # Initialize MmuExtruderStepper for all defined systems
+        # Pre-seed with the default extruder stepper already created in __init__
         self.system_extruder_steppers = {}
+        if self.mmu_extruder_stepper is not None:
+            self.system_extruder_steppers['extruder'] = self.mmu_extruder_stepper
+            # Also swap for the default extruder
+            printer_extruder = self.printer.lookup_object('extruder')
+            printer_extruder.extruder_stepper = self.mmu_extruder_stepper
+            self.mmu_extruder_stepper.stepper.set_trapq(printer_extruder.get_trapq())
+
         for sys_id, sys in self.mmu.systems.items():
             extruder_name = sys.get('extruder', 'extruder')
             if extruder_name not in self.system_extruder_steppers:
