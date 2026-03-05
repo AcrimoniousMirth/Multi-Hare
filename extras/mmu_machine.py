@@ -615,6 +615,8 @@ class MmuToolHead(toolhead.ToolHead, object):
         if self.extruder_name in self.system_extruder_steppers:
             self.mmu_extruder_stepper = self.system_extruder_steppers[self.extruder_name]
         
+        self.mmu.extruder_name = self.extruder_name
+        
         self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
         self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s)" % 
@@ -825,7 +827,7 @@ class MmuToolHead(toolhead.ToolHead, object):
             if self.sync_mode in [self.EXTRUDER_SYNCED_TO_GEAR, self.EXTRUDER_ONLY_ON_GEAR]:
                 driving_toolhead   = self.mmu_toolhead        # OLD owner (mmu/gear)
                 following_toolhead = self.printer_toolhead    # NEW owner (printer/extruder)
-                following_steppers = [following_toolhead.get_extruder().extruder_stepper.stepper]
+                following_steppers = getattr(self, 'synced_extruder_steppers', [following_toolhead.get_extruder().extruder_stepper.stepper])
                 old_trapq = driving_toolhead.get_trapq()      # trapq we’re finalizing
                 new_trapq = self._prev_trapq                  # trapq saved during sync()
                 pos = [following_toolhead.get_position()[3], 0., 0.]
@@ -900,7 +902,8 @@ class MmuToolHead(toolhead.ToolHead, object):
         if new_sync_mode in [self.EXTRUDER_SYNCED_TO_GEAR, self.EXTRUDER_ONLY_ON_GEAR]:
             driving_toolhead   = self.mmu_toolhead       # NEW owner (mmu/gear)
             following_toolhead = self.printer_toolhead   # OLD owner (printer/extruder)
-            following_steppers = [following_toolhead.get_extruder().extruder_stepper.stepper]
+            following_steppers = [self.mmu_extruder_stepper.stepper]
+            self.synced_extruder_steppers = following_steppers # Save for unsync Phase B
             self._prev_trapq = following_steppers[0].get_trapq() # Save the *old* trapq **before** any rebind/unregister
             driving_trapq = driving_toolhead.get_trapq()
             s_alloc = ffi_lib.cartesian_stepper_alloc(b"y")
