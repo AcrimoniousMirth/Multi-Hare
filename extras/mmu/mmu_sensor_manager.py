@@ -126,11 +126,13 @@ class MmuSensorManager:
                 self.mmu.SENSOR_EXTRUDER_ENTRY: self.mmu.SENSOR_EXTRUDER_ENTRY,
                 self.mmu.SENSOR_TOOLHEAD: self.mmu.SENSOR_TOOLHEAD
             }
-        self.viewable_sensors = {
-            name: self.all_sensors.get(mapped_name)
-            for name, mapped_name in sensor_name_map.items()
-            if self.all_sensors.get(mapped_name) is not None
-        }
+        self.viewable_sensors = {}
+        for name, mapped_name in sensor_name_map.items():
+            sensor = self.all_sensors.get(mapped_name)
+            if sensor is not None:
+                self.viewable_sensors[name] = sensor
+            else:
+                self.mmu.log_debug("MMU: Sensor manager: Viewable sensor '%s' (mapped to '%s') not found" % (name, mapped_name))
 
     # Activate only sensors for current unit and rename for access
     def reset_active_unit(self, unit):
