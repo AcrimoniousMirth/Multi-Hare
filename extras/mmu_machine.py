@@ -618,10 +618,17 @@ class MmuToolHead(toolhead.ToolHead, object):
         self.mmu.extruder_name = self.extruder_name
         
         # Multi-Hare: Swap filament_pos state for the active system
-        if system_id is not None:
-            self.mmu.system_active = system_id
-            var_name = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, system_id)
-            self.mmu.filament_pos = self.mmu.save_variables.allVariables.get(var_name, self.mmu.FILAMENT_POS_UNKNOWN)
+        current_gate = getattr(self.mmu, 'gate_selected', 0)
+        
+        if system_id is None:
+            if current_gate == getattr(self.mmu, 'TOOL_GATE_UNKNOWN', -1):
+                system_id = 0
+            else:
+                system_id = self.mmu.get_system_id(current_gate)
+        
+        self.mmu.system_active = system_id
+        var_name = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, system_id)
+        self.mmu.filament_pos = self.mmu.save_variables.allVariables.get(var_name, self.mmu.FILAMENT_POS_UNKNOWN)
 
         self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
