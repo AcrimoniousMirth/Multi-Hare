@@ -640,14 +640,13 @@ class MmuSensors:
 
         # Setup "mmu_gate" sensor(s)...
         gate_pins = []
-        for i in range(num_units):
+        for i in range(12): # Support up to 12 indexed units/systems
             p = config.get('gate_switch_pin_%d' % i, None)
             if p: gate_pins.append(p)
         if not gate_pins:
             gate_pins = list(config.getlist('gate_switch_pin', []))
         if gate_pins:
-            if len(gate_pins) not in [1, num_units]:
-                raise config.error("Invalid number of pins specified with gate_switch_pin. Expected 1 or %d but counted %d" % (num_units, len(gate_pins)))
+            # Multi-Hare: Allow any number of pins to support toolchanger/multi-system
             self._create_mmu_sensor(config, Mmu.SENSOR_GATE, None, gate_pins, event_delay, runout=True)
 
         # Setup "mmu_gear" sensors...
@@ -664,7 +663,7 @@ class MmuSensors:
 
         # Setup extruder (entrance) sensor(s)...
         extruder_pins = []
-        for i in range(num_units):
+        for i in range(12): # Support up to 12 indexed units/systems
             p = config.get('extruder_switch_pin_%d' % i, None)
             if p: extruder_pins.append(p)
         if not extruder_pins:
@@ -675,7 +674,7 @@ class MmuSensors:
 
         # Setup toolhead sensor(s)...
         toolhead_pins = []
-        for i in range(num_units):
+        for i in range(12): # Support up to 12 indexed units/systems
             p = config.get('toolhead_switch_pin_%d' % i, None)
             if p: toolhead_pins.append(p)
         if not toolhead_pins:
@@ -713,25 +712,23 @@ class MmuSensors:
 
         # Setup motor syncing feedback sensors...
         tension_pins = []
-        for i in range(num_units):
+        for i in range(12): # Support up to 12 indexed units/systems
             p = config.get('sync_feedback_tension_pin_%d' % i, None)
             if p: tension_pins.append(p)
         if not tension_pins:
             tension_pins = list(config.getlist('sync_feedback_tension_pin', []))
         if tension_pins:
-            if len(tension_pins) not in [1, num_units]:
-                raise config.error("Invalid number of pins specified with sync_feedback_tension_pin. Expected 1 or %d but counted %d" % (num_units, len(tension_pins)))
+            # Multi-Hare: Allow any number of pins to support toolchanger/multi-system
             self._create_mmu_sensor(config, Mmu.SENSOR_TENSION, None, tension_pins, 0, clog=True, tangle=True, button_handler=self._sync_tension_callback)
 
         compression_pins = []
-        for i in range(num_units):
+        for i in range(12): # Support up to 12 indexed units/systems
             p = config.get('sync_feedback_compression_pin_%d' % i, None)
             if p: compression_pins.append(p)
         if not compression_pins:
             compression_pins = list(config.getlist('sync_feedback_compression_pin', []))
         if compression_pins:
-            if len(compression_pins) not in [1, num_units]:
-                raise config.error("Invalid number of pins specified with sync_feedback_compression_pin. Expected 1 or %d but counted %d" % (num_units, len(compression_pins)))
+            # Multi-Hare: Allow any number of pins to support toolchanger/multi-system
             self._create_mmu_sensor(config, Mmu.SENSOR_COMPRESSION, None, compression_pins, 0, clog=True, tangle=True, button_handler=self._sync_compression_callback)
         
         # Setup analog (proportional) sync feedback

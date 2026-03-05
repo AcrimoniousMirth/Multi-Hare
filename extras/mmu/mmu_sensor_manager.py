@@ -38,14 +38,13 @@ class MmuSensorManager:
             self.mmu.SENSOR_COMPRESSION,
             self.mmu.SENSOR_PROPORTIONAL
         ])
-        if self.mmu.mmu_machine.num_units > 1:
-            for i in range(self.mmu.mmu_machine.num_units):
-                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_GATE, i))
-                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TENSION, i))
-                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_COMPRESSION, i))
-                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_PROPORTIONAL, i))
-                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_EXTRUDER_ENTRY, i))
-                sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TOOLHEAD, i))
+        for i in range(12): # Support up to 12 units/systems
+            sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_GATE, i))
+            sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TENSION, i))
+            sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_COMPRESSION, i))
+            sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_PROPORTIONAL, i))
+            sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_EXTRUDER_ENTRY, i))
+            sensor_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TOOLHEAD, i))
         sensor_names.extend([
             self.mmu.SENSOR_EXTRUDER_ENTRY,
             self.mmu.SENSOR_TOOLHEAD
@@ -66,13 +65,12 @@ class MmuSensorManager:
             self.mmu.SENSOR_TENSION,
             self.mmu.SENSOR_COMPRESSION
         ])
-        if self.mmu.mmu_machine.num_units > 1:
-            for i in range(self.mmu.mmu_machine.num_units):
-                self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_GATE, i))
-                self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_COMPRESSION, i))
-                self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TENSION, i))
-                self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_EXTRUDER_ENTRY, i))
-                self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TOOLHEAD, i))
+        for i in range(12): # Support up to 12 units/systems
+            self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_GATE, i))
+            self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_COMPRESSION, i))
+            self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TENSION, i))
+            self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_EXTRUDER_ENTRY, i))
+            self.endstop_names.append(self.get_unit_sensor_name(self.mmu.SENSOR_TOOLHEAD, i))
         self.endstop_names.extend([
             self.mmu.SENSOR_EXTRUDER_ENTRY,
             self.mmu.SENSOR_TOOLHEAD
