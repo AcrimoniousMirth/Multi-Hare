@@ -617,10 +617,16 @@ class MmuToolHead(toolhead.ToolHead, object):
         
         self.mmu.extruder_name = self.extruder_name
         
+        # Multi-Hare: Swap filament_pos state for the active system
+        if system_id is not None:
+            self.mmu.system_active = system_id
+            var_name = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, system_id)
+            self.mmu.filament_pos = self.mmu.save_variables.allVariables.get(var_name, self.mmu.FILAMENT_POS_UNKNOWN)
+
         self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
-        self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s)" % 
-                          (self.toolhead_name, self.extruder_name))
+        self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d)" % 
+                          (self.toolhead_name, self.extruder_name, self.mmu.filament_pos))
 
     # Ensure the correct number of axes for convenience - MMU only has two
     # Also, handle case when gear rail is synced to extruder

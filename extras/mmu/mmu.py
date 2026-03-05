@@ -114,14 +114,14 @@ class Mmu:
 
     SENSOR_EXTRUDER_NONE       = "none"           # Fake Extruder endstop aka don't attempt home
     SENSOR_EXTRUDER_COLLISION  = "collision"      # Fake Extruder endstop
-    SENSOR_EXTRUDER_ENTRY      = "extruder"       # Extruder entry sensor
+    SENSOR_EXTRUDER_ENTRY      = "mmu_extruder"    # Extruder entry sensor
     SENSOR_GEAR_TOUCH          = "mmu_gear_touch" # Stallguard based detection
 
     SENSOR_COMPRESSION         = "filament_compression"  # Filament sync-feedback compression detection
     SENSOR_TENSION             = "filament_tension"      # Filament sync-feedback tension detection
     SENSOR_PROPORTIONAL        = "filament_proportional" # Proportional sync-feedback sensor
 
-    SENSOR_TOOLHEAD            = "toolhead"
+    SENSOR_TOOLHEAD            = "mmu_toolhead"
     SENSOR_EXTRUDER_TOUCH      = "mmu_ext_touch"
 
     SENSOR_SELECTOR_TOUCH      = "mmu_sel_touch"  # For LinearSelector and LinearServoSelector
@@ -3944,6 +3944,9 @@ class Mmu:
 
     # Wrapper so we can minimize actual disk writes and batch updates
     def save_variable(self, variable, value, write=False):
+        if variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED]:
+            if hasattr(self, 'system_active'):
+                variable = "%s_%d" % (variable, self.system_active)
         self.save_variables.allVariables[variable] = value
         if write:
             self.write_variables()
@@ -7160,7 +7163,16 @@ class Mmu:
         extruder_only = bool(gcmd.get_int('EXTRUDER_ONLY', 0, minval=0, maxval=1)) or in_bypass
         skip_tip = bool(gcmd.get_int('SKIP_TIP', 0, minval=0, maxval=1))
         restore = bool(gcmd.get_int('RESTORE', 1, minval=0, maxval=1))
+        force = bool(gcmd.get_int('FORCE', 0, minval=0, maxval=1))
         do_form_tip = self.FORM_TIP_STANDALONE if not skip_tip else self.FORM_TIP_NONE
+
+        # Smarter Eject: Check if filament is already gone
+        if not force:
+            sensors = self.sensor_manager.get_sensors_before(self.FILAMENT_POS_LOADED, self.gate_selected)
+            if all(state is False for state in sensors.values()):
+                self.log_always("Filament not detected by any sensors for gate %d. Assuming manual unload." % self.gate_selected)
+                self._set_filament_pos_state(self.FILAMENT_POS_UNLOADED)
+                return
 
         self._note_toolchange("< %s" % self.selected_tool_string())
 
