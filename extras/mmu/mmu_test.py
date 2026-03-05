@@ -122,7 +122,7 @@ class MmuTest:
                 have_run_test = True
                 # Create phony sensors for testing purposes (will be removed after the test)
                 mmu_sensors = self.mmu.printer.lookup_object("mmu_sensors")
-                config = self.mmu.config.getsection('mmu_sensors')
+                config = self.mmu.config.get_section('mmu_sensors')
                 sensors_to_remove = []
                 compression_sensor_filament_present = tension_sensor_filament_present = False
 

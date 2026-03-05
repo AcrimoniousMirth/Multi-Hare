@@ -117,7 +117,7 @@ class MmuMachine:
         for unit in self.units:
             section = 'mmu_leds %s' % unit.name
             if config.has_section(section):
-                c = config.getsection(section)
+                c = config.get_section(section)
                 unit.leds = mmu_leds.MmuLeds(c, self, unit, unit.first_gate, unit.num_gates)
                 logging.info("MMU: Created: %s" % c.get_name())
                 self.printer.add_object(c.get_name(), unit.leds) # Register mmu_leds to stop it being loaded by klipper
@@ -552,7 +552,7 @@ class MmuToolHead(toolhead.ToolHead, object):
         self.mmu_extruder_stepper = None
         if self.mmu_machine.homing_extruder:
             # Create MmuExtruderStepper for later insertion into PrinterExtruder on Toolhead (on klippy:connect)
-            self.mmu_extruder_stepper = MmuExtruderStepper(config.getsection('extruder'), self.kin.rails[1]) # Only first extruder is handled
+            self.mmu_extruder_stepper = MmuExtruderStepper(config.get_section('extruder'), self.kin.rails[1]) # Only first extruder is handled
 
             # Nullify original extruder stepper definition so Klipper doesn't try to create it again. Restore in handle_connect() so config lookups succeed
             self.old_ext_options = {}
@@ -579,7 +579,7 @@ class MmuToolHead(toolhead.ToolHead, object):
         for sys_id, sys in self.mmu.systems.items():
             extruder_name = sys.get('extruder', 'extruder')
             if extruder_name not in self.system_extruder_steppers:
-                extruder_config = self.printer.lookup_object('configfile').getsection(extruder_name)
+                extruder_config = self.printer.lookup_object('configfile').get_section(extruder_name)
                 mmu_ext = MmuExtruderStepper(extruder_config, self.kin.rails[1])
                 self.system_extruder_steppers[extruder_name] = mmu_ext
                 # Swap the printer's extruder stepper for our homeable one
@@ -1073,14 +1073,14 @@ class MmuKinematics:
         # Setup "axis" rails
         self.rails = []
         if self.mmu_machine.selector_type in ['LinearSelector', 'LinearServoSelector', 'LinearMultiGearSelector', 'RotarySelector']:
-            self.rails.append(MmuLookupMultiRail(config.getsection(SELECTOR_STEPPER_CONFIG), need_position_minmax=True, default_position_endstop=0.))
+            self.rails.append(MmuLookupMultiRail(config.get_section(SELECTOR_STEPPER_CONFIG), need_position_minmax=True, default_position_endstop=0.))
             self.rails[0].setup_itersolve('cartesian_stepper_alloc', b'x')
         elif self.mmu_machine.selector_type in ['IndexedSelector']:
-            self.rails.append(MmuLookupMultiRail(config.getsection(SELECTOR_STEPPER_CONFIG), need_position_minmax=False, default_position_endstop=0.))
+            self.rails.append(MmuLookupMultiRail(config.get_section(SELECTOR_STEPPER_CONFIG), need_position_minmax=False, default_position_endstop=0.))
             self.rails[0].setup_itersolve('cartesian_stepper_alloc', b'x')
         else:
             self.rails.append(DummyRail())
-        self.rails.append(MmuLookupMultiRail(config.getsection(GEAR_STEPPER_CONFIG), need_position_minmax=False, default_position_endstop=0.))
+        self.rails.append(MmuLookupMultiRail(config.get_section(GEAR_STEPPER_CONFIG), need_position_minmax=False, default_position_endstop=0.))
         self.rails[1].setup_itersolve('cartesian_stepper_alloc', b'y')
 
         for s in self.get_steppers():
@@ -1343,7 +1343,7 @@ def MmuLookupMultiRail(config, need_position_minmax=True, default_position_endst
         section_name = "%s_%d" % (config.get_name(), i)
         if not config.has_section(section_name):
             break
-        rail.add_stepper_from_config(config.getsection(section_name))
+        rail.add_stepper_from_config(config.get_section(section_name))
     return rail
 
 
