@@ -574,11 +574,6 @@ class MmuToolHead(toolhead.ToolHead, object):
 
     def handle_connect(self):
         self.printer_toolhead = self.printer.lookup_object('toolhead')
-
-        # Restore extruder stepper options that were removed during __init__
-        if hasattr(self, 'old_ext_options'):
-            for option, value in self.old_ext_options.items():
-                self.config.fileconfig.set('extruder', option, value)
         
         # Initialize MmuExtruderStepper for all defined systems
         # Pre-seed with the default extruder stepper already created in __init__
