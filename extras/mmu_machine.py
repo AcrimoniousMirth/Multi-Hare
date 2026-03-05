@@ -855,9 +855,12 @@ class MmuToolHead(toolhead.ToolHead, object):
             _finalize_if_valid(old_trapq, t0)
 
             # Rebind steppers back to the NEW owner’s trapq and restore kinematics
-            for i, s in enumerate(following_steppers):
-                s.set_stepper_kinematics(self._prev_sk[i])
-                s.set_rotation_distance(self._prev_rd[i])
+            if len(following_steppers) != len(self._prev_sk):
+                logging.error("MMU: _prev_sk length mismatch! following=%d, prev_sk=%d", len(following_steppers), len(self._prev_sk))
+                
+            for s, sk, rd in zip(following_steppers, self._prev_sk, self._prev_rd):
+                s.set_stepper_kinematics(sk)
+                s.set_rotation_distance(rd)
                 # s.set_trapq(new_trapq)                        # Attach to NEW owner on the pre-saved trapq
                 self._unregister(driving_toolhead, s)                  # Detach from OLD owner…
                 self._register(following_toolhead, s, trapq=new_trapq) # …then attach to NEW owner on the pre-saved trapq
