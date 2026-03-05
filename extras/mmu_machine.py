@@ -551,17 +551,32 @@ class MmuToolHead(toolhead.ToolHead, object):
         self.mmu_machine = self.printer.lookup_object("mmu_machine")
         self.config = config
         self.mmu_extruder_stepper = None
+        self.system_extruder_steppers = {}
+        self.old_ext_options = {}  # keyed by extruder name
         if self.mmu_machine.homing_extruder:
-            # Create MmuExtruderStepper for later insertion into PrinterExtruder on Toolhead (on klippy:connect)
-            self.mmu_extruder_stepper = MmuExtruderStepper(config.getsection('extruder'), self.kin.rails[1]) # Only first extruder is handled
+            # Create MmuExtruderStepper for ALL system extruders BEFORE Klipper loads the normal extruder modules.
+            # This ensures we claim the stepper pins first, then strip them from config so the normal
+            # PrinterExtruder modules don't try to register them again.
+            seen_extruders = set()
+            for sys_id, sys in self.mmu.systems.items():
+                extruder_name = sys.get('extruder', 'extruder')
+                if extruder_name in seen_extruders:
+                    continue
+                seen_extruders.add(extruder_name)
 
-            # Nullify original extruder stepper definition so Klipper doesn't try to create it again. Restore in handle_connect() so config lookups succeed
-            self.old_ext_options = {}
-            self.config = config
-            for i in SHAREABLE_STEPPER_PARAMS + OTHER_STEPPER_PARAMS:
-                if config.fileconfig.has_option('extruder', i):
-                    self.old_ext_options[i] = config.fileconfig.get('extruder', i)
-                    config.fileconfig.remove_option('extruder', i)
+                mmu_ext = MmuExtruderStepper(config.getsection(extruder_name), self.kin.rails[1])
+                self.system_extruder_steppers[extruder_name] = mmu_ext
+
+                # Nullify stepper options so Klipper doesn't try to create duplicate steppers
+                self.old_ext_options[extruder_name] = {}
+                for i in SHAREABLE_STEPPER_PARAMS + OTHER_STEPPER_PARAMS:
+                    if config.fileconfig.has_option(extruder_name, i):
+                        self.old_ext_options[extruder_name][i] = config.fileconfig.get(extruder_name, i)
+                        config.fileconfig.remove_option(extruder_name, i)
+
+            # Set default extruder stepper (first one, typically 'extruder')
+            if 'extruder' in self.system_extruder_steppers:
+                self.mmu_extruder_stepper = self.system_extruder_steppers['extruder']
 
         self.printer.register_event_handler('klippy:connect', self.handle_connect)
 
@@ -574,25 +589,11 @@ class MmuToolHead(toolhead.ToolHead, object):
 
     def handle_connect(self):
         self.printer_toolhead = self.printer.lookup_object('toolhead')
-        
-        # Initialize MmuExtruderStepper for all defined systems
-        # Pre-seed with the default extruder stepper already created in __init__
-        self.system_extruder_steppers = {}
-        if self.mmu_extruder_stepper is not None:
-            self.system_extruder_steppers['extruder'] = self.mmu_extruder_stepper
-            # Also swap for the default extruder
-            printer_extruder = self.printer.lookup_object('extruder')
-            printer_extruder.extruder_stepper = self.mmu_extruder_stepper
-            self.mmu_extruder_stepper.stepper.set_trapq(printer_extruder.get_trapq())
 
-        for sys_id, sys in self.mmu.systems.items():
-            extruder_name = sys.get('extruder', 'extruder')
-            if extruder_name not in self.system_extruder_steppers:
-                extruder_config = self.config.getsection(extruder_name)
-                mmu_ext = MmuExtruderStepper(extruder_config, self.kin.rails[1])
-                self.system_extruder_steppers[extruder_name] = mmu_ext
-                # Swap the printer's extruder stepper for our homeable one
-                printer_extruder = self.printer.lookup_object(extruder_name)
+        # Swap all system extruder steppers into their PrinterExtruder objects
+        for extruder_name, mmu_ext in self.system_extruder_steppers.items():
+            printer_extruder = self.printer.lookup_object(extruder_name, None)
+            if printer_extruder is not None:
                 printer_extruder.extruder_stepper = mmu_ext
                 mmu_ext.stepper.set_trapq(printer_extruder.get_trapq())
         
