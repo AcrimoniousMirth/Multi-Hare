@@ -224,28 +224,30 @@ class MmuRunoutHelper:
 # Maps sensor range to [-1,1]
 class MmuProportionalSensor:
 
-    def __init__(self, config, name):
+    def __init__(self, config, name, unit=None):
         self.printer = config.get_printer()
         self.reactor = self.printer.get_reactor()
         self.name = name
+        self.unit = unit
+        suffix = ("_%d" % unit) if unit is not None else ""
         self._last_extreme = None
 
         # Config
-        self._pin           = config.get('sync_feedback_analog_pin')
-        max_tension         = config.getfloat('sync_feedback_analog_max_tension', 1)
-        max_compression     = config.getfloat('sync_feedback_analog_max_compression', 0)
+        self._pin           = config.get('sync_feedback_analog_pin' + suffix)
+        max_tension         = config.getfloat('sync_feedback_analog_max_tension' + suffix, 1)
+        max_compression     = config.getfloat('sync_feedback_analog_max_compression' + suffix, 0)
 
         # Determine the actual raw min/max sensor values
         raw_min = min(max_tension, max_compression)
         raw_max = max(max_tension, max_compression)
         mid_point = (max_tension + max_compression) / 2.0
 
-        self._neutral_point = config.getfloat('sync_feedback_analog_neutral_point', mid_point, minval=raw_min, maxval=raw_max)
+        self._neutral_point = config.getfloat('sync_feedback_analog_neutral_point' + suffix, mid_point, minval=raw_min, maxval=raw_max)
 
-        self._gamma         = config.getfloat('sync_feedback_analog_gamma', 1)           # Not exposed
-        self._sample_time   = config.getfloat('sync_feedback_analog_sample_time', 0.005) # Not exposed
-        self._sample_count  = config.getint('sync_feedback_analog_sample_count', 5)      # Not exposed
-        self._report_time   = config.getfloat('sync_feedback_analog_report_time', 0.100) # Not exposed
+        self._gamma         = config.getfloat('sync_feedback_analog_gamma' + suffix, 1)           # Not exposed
+        self._sample_time   = config.getfloat('sync_feedback_analog_sample_time' + suffix, 0.005) # Not exposed
+        self._sample_count  = config.getint('sync_feedback_analog_sample_count' + suffix, 5)      # Not exposed
+        self._report_time   = config.getfloat('sync_feedback_analog_report_time' + suffix, 0.100) # Not exposed
 
         self._reversed = (max_compression < max_tension)
         eps = 1e-12
@@ -733,6 +735,12 @@ class MmuSensors:
         
         # Setup analog (proportional) sync feedback
         # Uses single analog input; value scaled in [-1, 1]
+        for i in range(12): # Support up to 12 indexed units/systems
+            analog_pin = config.get('sync_feedback_analog_pin_%d' % i, None)
+            if analog_pin:
+                name = "unit_%d_%s" % (i, Mmu.SENSOR_PROPORTIONAL)
+                self.sensors[name] = MmuProportionalSensor(config, name=name, unit=i)
+
         analog_pin = config.get('sync_feedback_analog_pin', None)
         if analog_pin:
             self.sensors[Mmu.SENSOR_PROPORTIONAL] = MmuProportionalSensor(config, name=Mmu.SENSOR_PROPORTIONAL)
