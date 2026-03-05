@@ -1363,9 +1363,10 @@ class MmuExtruderStepper(ExtruderStepper, object):
         super(MmuExtruderStepper, self).__init__(config)
 
         # Ensure corresponding TMC section is loaded so endstops can be added and to prevent error later when toolhead is created
+        extruder_name = config.get_name()
         for chip in TMC_CHIPS:
             try:
-                _ = self.printer.load_object(config, '%s extruder' % chip)
+                _ = self.printer.load_object(config, '%s %s' % (chip, extruder_name))
                 break
             except:
                 pass
