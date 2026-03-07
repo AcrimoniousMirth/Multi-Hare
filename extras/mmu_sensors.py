@@ -768,7 +768,7 @@ class MmuSensors:
                     name = "unit_%d_%s" % (unit, name_prefix)
                 else:
                     name = name_prefix
-                sensor = name if gate is not None else "%s_sensor" % name
+                sensor = name
                 section = "filament_switch_sensor %s" % sensor
                 config.fileconfig.add_section(section)
                 config.fileconfig.set(section, "switch_pin", switch_pin)
