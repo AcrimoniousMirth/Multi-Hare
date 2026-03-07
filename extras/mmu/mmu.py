@@ -43,7 +43,7 @@ from .mmu_environment_manager   import MmuEnvironmentManager
 
 # Main klipper module
 class Mmu:
-    VERSION = 0.1 # Multi-Hare specialized version
+    VERSION = 0.2 # Multi-Hare specialized version
 
     BOOT_DELAY = 2.5 # Delay before running bootup tasks
 
