@@ -749,7 +749,7 @@ class MmuSensors:
 
     def get_status(self, eventtime):
         return {
-            name: sensor.get_status(eventtime)
+            name: bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
             for name, sensor in self.sensors.items()
         }
 

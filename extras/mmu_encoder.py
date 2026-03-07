@@ -308,8 +308,6 @@ class MmuEncoder:
                 'desired_headroom': round(self.desired_headroom, 1),
                 'detection_mode': self.detection_mode,
                 'enabled': self._enabled,
-                'filament_detected': self.filament_detected,
-                'runout_suspended': not self._enabled,
                 'flow_rate': int(round(min(self.extrusion_flowrate, 1.) * 100))
         }
 

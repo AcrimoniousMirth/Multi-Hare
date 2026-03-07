@@ -337,10 +337,10 @@ class MmuSensorManager:
 
     def get_status(self, eventtime=None):
         result = {
-            name: sensor.get_status(eventtime)
+            name: bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
             for name, sensor in self.viewable_sensors.items()
         }
         # Multi-Hare: Include all known hardware sensors with their full names for UI visibility
         for name, sensor in self.all_sensors.items():
-            result[name] = sensor.get_status(eventtime)
+            result[name] = bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
         return result
