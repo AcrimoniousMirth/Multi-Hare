@@ -253,7 +253,9 @@ class Mmu:
 
     @property
     def form_tip_macro(self):
-        sys = getattr(self, 'get_active_system', lambda: None)()
+        sys = None
+        if hasattr(self, 'gate_selected'):
+            sys = self.get_active_system()
         if sys and sys.get('form_tip_macro'):
             macro = sys['form_tip_macro']
             if macro.lower() == 'none': return ''
