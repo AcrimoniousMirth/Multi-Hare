@@ -350,11 +350,12 @@ class MmuProportionalSensor:
                 self.printer.send_event("mmu:sync_feedback", read_time, self.value)
 
     def get_status(self, eventtime):
-        return {
-            "enabled":          bool(self.runout_helper.sensor_enabled),
+        status = self.runout_helper.get_status(eventtime)
+        status.update({
             "value":            self.value,             # in [-1.0, 1.0] (mapped)
             "value_raw":        self.value_raw,         # raw
-        }
+        })
+        return status
 
 
 
@@ -748,7 +749,7 @@ class MmuSensors:
 
     def get_status(self, eventtime):
         return {
-            name: sensor.runout_helper.get_status(eventtime)
+            name: sensor.get_status(eventtime)
             for name, sensor in self.sensors.items()
         }
 
