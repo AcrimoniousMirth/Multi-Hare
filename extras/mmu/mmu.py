@@ -1591,7 +1591,7 @@ class Mmu:
         if self.has_espooler():
             status.update(self.espooler.get_status(eventtime))
 
-        status['sensors'] = self.sensor_manager.get_status(eventtime)
+        status.update(self.sensor_manager.get_status(eventtime))
         if self.has_encoder():
             status['encoder'] = self.encoder_sensor.get_status(eventtime)
         return status
