@@ -582,6 +582,7 @@ class MmuToolHead(toolhead.ToolHead, object):
 
         # Add useful debugging command
         gcode.register_command('_MMU_DUMP_TOOLHEAD', self.cmd_DUMP_RAILS, desc=self.cmd_DUMP_RAILS_help)
+        gcode.register_command('SET_MMU_EXTRUDER', self.cmd_SET_MMU_EXTRUDER, desc=self.cmd_SET_MMU_EXTRUDER_help)
 
         # Bi-directional sync management of gear(s) and extruder(s)
         self.mmu_toolhead = self # Make it easier to read code and distinquish printer_toolhead from mmu_toolhead
@@ -599,15 +600,54 @@ class MmuToolHead(toolhead.ToolHead, object):
         
         self.update_active_system()
 
+    cmd_SET_MMU_EXTRUDER_help = "Switches the active extruder and syncs Multi-Hare system"
+    def cmd_SET_MMU_EXTRUDER(self, gcmd):
+        extruder_name = gcmd.get('EXTRUDER', 'extruder')
+        if extruder_name not in self.system_extruder_steppers:
+            raise gcmd.error("Extruder '%s' not found in Multi-Hare systems" % extruder_name)
+        
+        self.mmu.log_info("SET_MMU_EXTRUDER: Switching to %s" % extruder_name)
+        
+        # 1. Update references
+        new_stepper = self.system_extruder_steppers[extruder_name]
+        self.mmu_extruder_stepper = new_stepper
+        self.mmu.extruder_name = extruder_name
+        
+        # 2. Find and update active system
+        system_id = None
+        for sys_id, sys in self.mmu.systems.items():
+            if sys.get('extruder') == extruder_name:
+                system_id = sys_id
+                break
+        
+        if system_id is not None:
+            self.update_active_system(system_id)
+        else:
+            self.mmu.log_warning("SET_MMU_EXTRUDER: No system found for extruder %s" % extruder_name)
+
     def update_active_system(self, system_id=None):
         if not hasattr(self, 'printer_toolhead'): return # Too early
-        if system_id is not None:
-             self.mmu.system_active = system_id
-             
+        
+        # Multi-Hare: Save current system state before switching
+        if hasattr(self.mmu, 'system_active'):
+             self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_POS, self.mmu.filament_pos)
+             self.mmu.save_variable(self.mmu.VARS_MMU_GATE_SELECTED, self.mmu.gate_selected)
+             self.mmu.save_variable(self.mmu.VARS_MMU_TOOL_SELECTED, self.mmu.tool_selected)
+             self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_REMAINING, self.mmu.filament_remaining)
+
+        if system_id is None:
+            current_gate = getattr(self.mmu, 'gate_selected', self.mmu.TOOL_GATE_UNKNOWN)
+            if current_gate == self.mmu.TOOL_GATE_UNKNOWN:
+                system_id = 0
+            else:
+                system_id = self.mmu.get_system_id(current_gate)
+        
+        self.mmu.system_active = system_id
+        
+        # Get the extruder for the current system
         sys = self.mmu.get_active_system()
         if not sys: return
         
-        # Get the extruder for the current system
         self.extruder_name = sys.get('extruder', 'extruder')
         self.toolhead_name = sys.get('toolhead', 'T0')
         
@@ -616,24 +656,21 @@ class MmuToolHead(toolhead.ToolHead, object):
             self.mmu_extruder_stepper = self.system_extruder_steppers[self.extruder_name]
         
         self.mmu.extruder_name = self.extruder_name
-        
-        # Multi-Hare: Swap filament_pos state for the active system
-        current_gate = getattr(self.mmu, 'gate_selected', 0)
-        
-        if system_id is None:
-            if current_gate == getattr(self.mmu, 'TOOL_GATE_UNKNOWN', -1):
-                system_id = 0
-            else:
-                system_id = self.mmu.get_system_id(current_gate)
-        
-        self.mmu.system_active = system_id
-        var_name = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, system_id)
-        self.mmu.filament_pos = self.mmu.save_variables.allVariables.get(var_name, self.mmu.FILAMENT_POS_UNKNOWN)
-
         self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
+        # Load new system state
+        var_pos = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, system_id)
+        var_gate = "%s_%d" % (self.mmu.VARS_MMU_GATE_SELECTED, system_id)
+        var_tool = "%s_%d" % (self.mmu.VARS_MMU_TOOL_SELECTED, system_id)
+        var_rem = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_REMAINING, system_id)
+        
+        self.mmu.filament_pos = self.mmu.save_variables.allVariables.get(var_pos, self.mmu.FILAMENT_POS_UNKNOWN)
+        self.mmu.gate_selected = self.mmu.save_variables.allVariables.get(var_gate, self.mmu.TOOL_GATE_UNKNOWN)
+        self.mmu.tool_selected = self.mmu.save_variables.allVariables.get(var_tool, self.mmu.TOOL_GATE_UNKNOWN)
+        self.mmu.filament_remaining = self.mmu.save_variables.allVariables.get(var_rem, 0.0)
+
         self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d)" % 
-                          (self.toolhead_name, self.extruder_name, self.mmu.filament_pos))
+                           (self.toolhead_name, self.extruder_name, self.mmu.filament_pos))
 
         # Synchronize Klipper's active extruder so G1 E commands go to the correct toolhead
         try:

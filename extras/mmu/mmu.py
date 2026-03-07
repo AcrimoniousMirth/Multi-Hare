@@ -1257,7 +1257,7 @@ class Mmu:
         errors = []
 
         # Always load length of filament remaining in extruder (after cut) and last tool loaded
-        self.filament_remaining = self.save_variables.allVariables.get(self.VARS_MMU_FILAMENT_REMAINING, self.filament_remaining)
+        # Note: filament_remaining is now loaded per-system in the Multi-System section below
         self._last_tool = self.save_variables.allVariables.get(self.VARS_MMU_LAST_TOOL, self._last_tool)
 
         # Load EndlessSpool config
@@ -1284,9 +1284,21 @@ class Mmu:
                 errors.append("Incorrect number of gates specified with %s" % var)
         self._update_gate_color_rgb()
 
+        # Load initial system-specific state (default to system 0)
+        system_id = 0
+        var_pos = "%s_%d" % (self.VARS_MMU_FILAMENT_POS, system_id)
+        var_gate = "%s_%d" % (self.VARS_MMU_GATE_SELECTED, system_id)
+        var_tool = "%s_%d" % (self.VARS_MMU_TOOL_SELECTED, system_id)
+        var_rem = "%s_%d" % (self.VARS_MMU_FILAMENT_REMAINING, system_id)
+
+        self.filament_remaining = self.save_variables.allVariables.get(var_rem, 
+                                 self.save_variables.allVariables.get(self.VARS_MMU_FILAMENT_REMAINING, self.filament_remaining))
+
         # Load selected tool and gate
-        tool_selected = self.save_variables.allVariables.get(self.VARS_MMU_TOOL_SELECTED, self.tool_selected)
-        gate_selected = self.save_variables.allVariables.get(self.VARS_MMU_GATE_SELECTED, self.gate_selected)
+        tool_selected = self.save_variables.allVariables.get(var_tool, 
+                        self.save_variables.allVariables.get(self.VARS_MMU_TOOL_SELECTED, self.tool_selected))
+        gate_selected = self.save_variables.allVariables.get(var_gate,
+                        self.save_variables.allVariables.get(self.VARS_MMU_GATE_SELECTED, self.gate_selected))
         if (
             not (self.TOOL_GATE_BYPASS <= gate_selected <= self.num_gates) or
             gate_selected == self.TOOL_GATE_UNKNOWN
@@ -1304,7 +1316,9 @@ class Mmu:
         self._ensure_ttg_match() # Ensure tool/gate consistency
 
         # Previous filament position
-        self.filament_pos = self.save_variables.allVariables.get(self.VARS_MMU_FILAMENT_POS, self.filament_pos)
+        self.filament_pos = self.save_variables.allVariables.get(var_pos,
+                           self.save_variables.allVariables.get(self.VARS_MMU_FILAMENT_POS, self.filament_pos))
+        self.system_active = system_id
 
         if len(errors) > 0:
             self.log_warning("Warning: Some persisted state was ignored because it contained errors:\n%s" % '\n'.join(errors))
@@ -3958,7 +3972,7 @@ class Mmu:
 
     # Wrapper so we can minimize actual disk writes and batch updates
     def save_variable(self, variable, value, write=False):
-        if variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED]:
+        if variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
             if hasattr(self, 'system_active'):
                 variable = "%s_%d" % (variable, self.system_active)
         self.save_variables.allVariables[variable] = value
@@ -3966,6 +3980,9 @@ class Mmu:
             self.write_variables()
 
     def delete_variable(self, variable, write=False):
+        if variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
+            if hasattr(self, 'system_active'):
+                variable = "%s_%d" % (variable, self.system_active)
         _ = self.save_variables.allVariables.pop(variable, None)
         if write:
             self.write_variables()
@@ -6434,6 +6451,13 @@ class Mmu:
             return
 
         self.log_debug("Unloading tool %s" % self.selected_tool_string())
+        # In a multi-headed system, external macros (e.g. Toolchanger T0) might have
+        # forcefully changed the active Klipper extruder and mmu.extruder_name
+        # behind our back. We must ensure the system corresponding to the tool
+        # being unloaded is active so we extract from the correct physical hotend.
+        if hasattr(self, 'mmu_toolhead') and hasattr(self.mmu_toolhead, 'update_active_system'):
+            self.mmu_toolhead.update_active_system()
+            
         # Use the actual tool that was in use *before* this toolchange began
         # Falls back to current selection if not provided (backwards compatible)
         self._set_last_tool(self.tool_selected if prev_tool is None else prev_tool)
