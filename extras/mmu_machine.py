@@ -635,6 +635,13 @@ class MmuToolHead(toolhead.ToolHead, object):
         self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d)" % 
                           (self.toolhead_name, self.extruder_name, self.mmu.filament_pos))
 
+        # Synchronize Klipper's active extruder so G1 E commands go to the correct toolhead
+        try:
+            self.mmu.gcode.run_script_from_command("ACTIVATE_EXTRUDER EXTRUDER=%s" % self.extruder_name)
+        except Exception as e:
+            self.mmu.log_debug("Failed to activate extruder %s: %s" % (self.extruder_name, str(e)))
+
+
     # Ensure the correct number of axes for convenience - MMU only has two
     # Also, handle case when gear rail is synced to extruder
     def set_position(self, newpos, homing_axes=()):
