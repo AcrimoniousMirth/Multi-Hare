@@ -752,7 +752,6 @@ class MmuSensors:
             for name, sensor in self.sensors.items()
         }
 
-
     def _create_mmu_sensor(
         self, config, name_prefix, gate, switch_pins, event_delay,
         insert=False, remove=False, runout=False, clog=False, tangle=False,
