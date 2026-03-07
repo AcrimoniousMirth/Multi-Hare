@@ -650,6 +650,7 @@ class MmuToolHead(toolhead.ToolHead, object):
         
         self.extruder_name = sys.get('extruder', 'extruder')
         self.toolhead_name = sys.get('toolhead', 'T0')
+        self.mmu.form_tip_macro = sys.get('form_tip_macro', self.mmu.form_tip_macro)
         
         # Update references for the MMU machine
         if self.extruder_name in self.system_extruder_steppers:

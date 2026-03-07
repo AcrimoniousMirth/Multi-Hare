@@ -773,7 +773,7 @@ class Mmu:
                         'extruder_sensor': cp.get(section, 'extruder_sensor'),
                         'toolhead_sensor': cp.get(section, 'toolhead_sensor'),
                         'tension_sensor': cp.get(section, 'tension_sensor'),
-                        'form_tip_macro': cp.get(section, 'form_tip_macro', fallback=''),
+                        'form_tip_macro': cp.get(section, 'form_tip_macro', fallback=self.form_tip_macro),
                     }
             logging.info("Multi-Hare: Loaded %d systems from %s" % (len(self.systems), systems_path))
         except Exception as e:
@@ -5498,6 +5498,9 @@ class Mmu:
 
             self._set_filament_position(-self.toolhead_extruder_to_nozzle)
             return False
+
+        if self.form_tip_macro == "none":
+            return True
 
         gcode_macro = self.printer.lookup_object("gcode_macro %s" % self.form_tip_macro, None)
         if gcode_macro is None:
