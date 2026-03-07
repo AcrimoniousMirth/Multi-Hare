@@ -251,6 +251,19 @@ class Mmu:
 
     UPGRADE_REMINDER = "Multi-Hare update: Please ensure you are tracking the https://github.com/AcrimoniousMirth/Multi-Hare fork."
 
+    @property
+    def form_tip_macro(self):
+        sys = getattr(self, 'get_active_system', lambda: None)()
+        if sys and sys.get('form_tip_macro'):
+            macro = sys['form_tip_macro']
+            if macro.lower() == 'none': return ''
+            return macro
+        return getattr(self, '_form_tip_macro', '')
+
+    @form_tip_macro.setter
+    def form_tip_macro(self, value):
+        self._form_tip_macro = value
+
     def __init__(self, config):
         self.config = config
         self.printer = config.get_printer()
@@ -760,6 +773,7 @@ class Mmu:
                         'extruder_sensor': cp.get(section, 'extruder_sensor'),
                         'toolhead_sensor': cp.get(section, 'toolhead_sensor'),
                         'tension_sensor': cp.get(section, 'tension_sensor'),
+                        'form_tip_macro': cp.get(section, 'form_tip_macro', fallback=''),
                     }
             logging.info("Multi-Hare: Loaded %d systems from %s" % (len(self.systems), systems_path))
         except Exception as e:
