@@ -746,6 +746,12 @@ class MmuSensors:
         if analog_pin:
             self.sensors[Mmu.SENSOR_PROPORTIONAL] = MmuProportionalSensor(config, name=Mmu.SENSOR_PROPORTIONAL)
 
+    def get_status(self, eventtime):
+        return {
+            name: bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
+            for name, sensor in self.sensors.items()
+        }
+
 
     def _create_mmu_sensor(
         self, config, name_prefix, gate, switch_pins, event_delay,

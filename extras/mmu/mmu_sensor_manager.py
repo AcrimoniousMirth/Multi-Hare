@@ -340,4 +340,7 @@ class MmuSensorManager:
             name: bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
             for name, sensor in self.viewable_sensors.items()
         }
+        # Multi-Hare: Include all known hardware sensors with their full names for UI visibility
+        for name, sensor in self.all_sensors.items():
+            result[name] = bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
         return result
