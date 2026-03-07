@@ -7056,6 +7056,14 @@ class Mmu:
                         try:
                             for i in range(attempts):
                                 try:
+                                    # Multi-Hare: Only unload if the system required for the NEW tool is loaded
+                                    # This avoids unloading the current system if the new tool is on a different toolhead
+                                    new_sys_id = self.get_system_id(self.ttg_map[tool])
+                                    if new_sys_id != self.system_active:
+                                        self.mmu_toolhead.update_active_system(new_sys_id)
+                                        # Update prev_tool to reflect the (now active) system's state before potentially unloading it
+                                        prev_tool = self.tool_selected
+
                                     if self.filament_pos != self.FILAMENT_POS_UNLOADED:
                                         self._unload_tool(form_tip=do_form_tip, prev_tool=prev_tool)
                                     self._select_and_load_tool(tool, purge=do_purge)
@@ -9121,17 +9129,20 @@ class Mmu:
                             else:
                                 raise MmuError("Current gate is invalid")
 
-                            # Force initial eject
-                            if filament_pos != self.FILAMENT_POS_UNLOADED:
-                                self.log_info("Unloading current tool prior to checking gates")
-
-                                # Perform full unload sequence including parking
-                                self._note_toolchange("< %s" % self.selected_tool_string())
-                                self.last_statistics = {}
-                                self._save_toolhead_position_and_park('unload')
-                                self._unload_tool(form_tip=self.FORM_TIP_STANDALONE)
-                                self._persist_gate_statistics()
-                                self._continue_after('unload')
+                            # Multi-Hare: Force initial eject only on involved systems
+                            involved_systems = set([self.get_system_id(g) for g, t in gates_tools])
+                            orig_system_id = self.system_active
+                            for sys_id in involved_systems:
+                                self.mmu_toolhead.update_active_system(sys_id)
+                                if self.filament_pos != self.FILAMENT_POS_UNLOADED:
+                                    self.log_info("Unloading System %d prior to checking gates" % sys_id)
+                                    self._note_toolchange("< %s" % self.selected_tool_string())
+                                    self.last_statistics = {}
+                                    self._save_toolhead_position_and_park('unload')
+                                    self._unload_tool(form_tip=self.FORM_TIP_STANDALONE)
+                                    self._persist_gate_statistics()
+                                    self._continue_after('unload')
+                            self.mmu_toolhead.update_active_system(orig_system_id)
 
                             if len(gates_tools) > 1:
                                 self.log_info("Will check gates: %s" % ', '.join(str(g) for g,t in gates_tools))
