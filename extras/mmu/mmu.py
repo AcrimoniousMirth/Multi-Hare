@@ -1546,6 +1546,7 @@ class Mmu:
             'next_tool': self._next_tool,
             'toolchange_purge_volume': self.toolchange_purge_volume,
             'last_toolchange': self._last_toolchange,
+            'systems': self.systems, # MULTI-HARE: Expose system variables to Jinja
             'runout': self.is_handling_runout, # DEPRECATED (use operation)
             'operation': self.saved_toolhead_operation,
             'filament': "Loaded" if self.filament_pos == self.FILAMENT_POS_LOADED else
