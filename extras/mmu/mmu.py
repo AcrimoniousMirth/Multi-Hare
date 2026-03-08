@@ -776,6 +776,7 @@ class Mmu:
                         'toolhead_sensor': cp.get(section, 'toolhead_sensor'),
                         'tension_sensor': cp.get(section, 'tension_sensor'),
                         'form_tip_macro': cp.get(section, 'form_tip_macro', fallback=self.form_tip_macro),
+                        'check_gate_verify': cp.getboolean(section, 'check_gate_verify', fallback=True),
                     }
             logging.info("Multi-Hare: Loaded %d systems from %s" % (len(self.systems), systems_path))
         except Exception as e:
@@ -3977,6 +3978,8 @@ class Mmu:
     def save_variable(self, variable, value, write=False, global_only=False):
         if not global_only and variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
             if hasattr(self, 'system_active'):
+                # Also save the global generic version if this is the active system to keep Klipper macros in sync
+                self.save_variables.allVariables[variable] = value
                 variable = "%s_%d" % (variable, self.system_active)
         self.save_variables.allVariables[variable] = value
         if write:
@@ -9131,6 +9134,25 @@ class Mmu:
                                 gates_tools.append([self.gate_selected, -1])
                             else:
                                 raise MmuError("Current gate is invalid")
+
+                            # Multi-Hare: Filter out gates that are already loaded
+                            filtered_gates_tools = []
+                            pre_check_system_id = self.system_active
+                            for gate, tool in gates_tools:
+                                sys_id = self.get_system_id(gate)
+                                sys_data = self.systems.get(sys_id, {})
+                                self.mmu_toolhead.update_active_system(sys_id)
+                                
+                                # Optimized skip for specialized systems (e.g. System 0 with single gate)
+                                check_gate_verify = sys_data.get('check_gate_verify', True)
+                                if not check_gate_verify and self.gate_selected == gate and self.filament_pos == self.FILAMENT_POS_LOADED:
+                                    if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) is not False:
+                                        self.log_info("Gate %d is already loaded and verification is disabled for this system, skipping physical check" % gate)
+                                        self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
+                                        continue
+                                filtered_gates_tools.append([gate, tool])
+                            self.mmu_toolhead.update_active_system(pre_check_system_id)
+                            gates_tools = filtered_gates_tools
 
                             # Multi-Hare: Force initial eject only on involved systems
                             involved_systems = set([self.get_system_id(g) for g, t in gates_tools])
