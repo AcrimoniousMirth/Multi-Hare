@@ -258,7 +258,7 @@ class Mmu:
             sys = self.get_active_system()
         if sys and sys.get('form_tip_macro'):
             macro = sys['form_tip_macro']
-            if macro.lower() == 'none': return ''
+            if macro.lower() == 'none': return 'none'
             return macro
         return getattr(self, '_form_tip_macro', '')
 
