@@ -3974,16 +3974,16 @@ class Mmu:
         self.log_always("MMU disabled")
 
     # Wrapper so we can minimize actual disk writes and batch updates
-    def save_variable(self, variable, value, write=False):
-        if variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
+    def save_variable(self, variable, value, write=False, global_only=False):
+        if not global_only and variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
             if hasattr(self, 'system_active'):
                 variable = "%s_%d" % (variable, self.system_active)
         self.save_variables.allVariables[variable] = value
         if write:
             self.write_variables()
 
-    def delete_variable(self, variable, write=False):
-        if variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
+    def delete_variable(self, variable, write=False, global_only=False):
+        if not global_only and variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
             if hasattr(self, 'system_active'):
                 variable = "%s_%d" % (variable, self.system_active)
         _ = self.save_variables.allVariables.pop(variable, None)

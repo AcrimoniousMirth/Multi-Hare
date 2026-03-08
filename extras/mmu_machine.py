@@ -670,6 +670,12 @@ class MmuToolHead(toolhead.ToolHead, object):
         self.mmu.tool_selected = self.mmu.save_variables.allVariables.get(var_tool, self.mmu.TOOL_GATE_UNKNOWN)
         self.mmu.filament_remaining = self.mmu.save_variables.allVariables.get(var_rem, 0.0)
 
+        # Multi-Hare: Force Klipper's generic variables to reflect the active system's state visually and programmatically
+        self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_POS, self.mmu.filament_pos, global_only=True)
+        self.mmu.save_variable(self.mmu.VARS_MMU_GATE_SELECTED, self.mmu.gate_selected, global_only=True)
+        self.mmu.save_variable(self.mmu.VARS_MMU_TOOL_SELECTED, self.mmu.tool_selected, global_only=True)
+        self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_REMAINING, self.mmu.filament_remaining, global_only=True)
+
         self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d)" % 
                            (self.toolhead_name, self.extruder_name, self.mmu.filament_pos))
 
