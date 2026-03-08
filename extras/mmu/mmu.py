@@ -3645,6 +3645,27 @@ class Mmu:
 
         self._adjust_espooler_assist()
 
+    def _reconcile_filament_pos_from_sensors(self):
+        th_detected = self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD)
+        ex_detected = self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY)
+
+        if th_detected:
+            # If detected at Toolhead sensor, it is at least that far.
+            # We set it to HOMED_TS (8). Even if it was already LOADED (10),
+            # downgrading to 8 is safe and forces a final true-up move to the nozzle
+            # when the print actually starts (via load_tool -> load_sequence).
+            # This handles the "filament is parked" scenario correctly.
+            if self.filament_pos != self.FILAMENT_POS_HOMED_TS:
+                self.log_info("Filament detected at toolhead sensor, reconciling state to HOMED_TS for T0 start")
+                self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
+            return True
+        elif ex_detected:
+            if self.filament_pos != self.FILAMENT_POS_HOMED_ENTRY:
+                self.log_info("Filament detected at extruder entry, reconciling state to HOMED_ENTRY")
+                self._set_filament_pos_state(self.FILAMENT_POS_HOMED_ENTRY)
+            return True
+        return False
+
     def _adjust_espooler_assist(self):
         """
         Ensure espooler print assist is in correct state based on whether the filament is in the extruder or not
@@ -4947,9 +4968,15 @@ class Mmu:
                 # With toolhead sensor for accuracy we always first home to toolhead sensor past the extruder entrance
                 # The remaining load distance is relative to the toolhead sensor
                 if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD):
-                    raise MmuError("Possible toolhead sensor malfunction - filament detected before it entered extruder")
-                self.log_debug("Homing up to %.1fmm to toolhead sensor%s" % (self.toolhead_homing_max, (" (synced)" if synced else "")))
-                actual,fhomed,measured,_ = self.trace_filament_move("Homing to toolhead sensor", self.toolhead_homing_max, motor=motor, homing_move=1, endstop_name=self.SENSOR_TOOLHEAD)
+                    if self.filament_pos < self.FILAMENT_POS_HOMED_TS:
+                         raise MmuError("Possible toolhead sensor malfunction - filament detected before it entered extruder")
+                    else:
+                         self.log_debug("Filament already at toolhead sensor, skipping homing move")
+                         fhomed = True
+                else:
+                    self.log_debug("Homing up to %.1fmm to toolhead sensor%s" % (self.toolhead_homing_max, (" (synced)" if synced else "")))
+                    actual,fhomed,measured,_ = self.trace_filament_move("Homing to toolhead sensor", self.toolhead_homing_max, motor=motor, homing_move=1, endstop_name=self.SENSOR_TOOLHEAD)
+                
                 if fhomed:
                     self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
                     homing_movement = max(actual - (self.toolhead_extruder_to_nozzle - self.toolhead_sensor_to_nozzle), 0)
@@ -5209,9 +5236,9 @@ class Mmu:
                     self.log_debug("Assertion failure: Unexpected state %d in load_sequence(extruder_only=True)" % start_filament_pos)
                     raise MmuError("Cannot load extruder because already in extruder. Unload first")
 
-            elif start_filament_pos >= self.FILAMENT_POS_EXTRUDER_ENTRY:
-                self.log_debug("Assertion failure: Unexpected state %d in load_sequence()" % start_filament_pos)
-                raise MmuError("Cannot load because already in extruder. Unload first")
+            elif start_filament_pos >= self.FILAMENT_POS_LOADED:
+                self.log_debug("Assertion failure: Already LOADED in load_sequence()")
+                raise MmuError("Cannot load because already loaded. Unload first")
 
             else:
                 if start_filament_pos <= self.FILAMENT_POS_UNLOADED:
@@ -9142,12 +9169,15 @@ class Mmu:
                                 sys_id = self.get_system_id(gate)
                                 sys_data = self.systems.get(sys_id, {})
                                 self.mmu_toolhead.update_active_system(sys_id)
-                                
+
                                 # Optimized skip for specialized systems (e.g. System 0 with single gate)
                                 check_gate_verify = sys_data.get('check_gate_verify', True)
-                                if not check_gate_verify and self.gate_selected == gate and self.filament_pos == self.FILAMENT_POS_LOADED:
-                                    if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) is not False:
-                                        self.log_info("Gate %d is already loaded and verification is disabled for this system, skipping physical check" % gate)
+                                if not check_gate_verify and self.gate_selected == gate:
+                                    # Perform a "Sensor Reconcile" instead of a blind skip.
+                                    # This ensures that even if we don't do a full 1.2m retract,
+                                    # we at least confirm the filament is at the head and "true up" the state.
+                                    if self._reconcile_filament_pos_from_sensors():
+                                        self.log_info("Gate %d state reconciled from sensors, skipping physical check" % gate)
                                         self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
                                         continue
                                 filtered_gates_tools.append([gate, tool])
