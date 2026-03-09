@@ -3980,7 +3980,8 @@ class Mmu:
         self._load_persisted_state()
         self.is_enabled = True
         self.printer.send_event("mmu:enabled")
-        self.log_always("MMU enabled")
+        self.log_info("Multi-Hare MMU v%s (T0-Unload-Fix-v3) loaded" % self.VERSION)
+        self.log_always("Multi-Hare MMU initialized")
         self._schedule_mmu_bootup_tasks()
 
     def _disable_mmu(self):
@@ -9172,14 +9173,20 @@ class Mmu:
 
                                 # Optimized skip for specialized systems (e.g. System 0 with single gate)
                                 check_gate_verify = sys_data.get('check_gate_verify', True)
-                                if not check_gate_verify and self.gate_selected == gate:
-                                    # Perform a "Sensor Reconcile" instead of a blind skip.
-                                    # This ensures that even if we don't do a full 1.2m retract,
-                                    # we at least confirm the filament is at the head and "true up" the state.
-                                    if self._reconcile_filament_pos_from_sensors():
-                                        self.log_info("Gate %d state reconciled from sensors, skipping physical check" % gate)
-                                        self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
-                                        continue
+                                is_single_gate = len(sys_data.get('tools', [])) == 1
+                                current_sys_gate = sys_data['tools'][0] if is_single_gate else -1
+                                
+                                if not check_gate_verify:
+                                    # If it's a single gate system, we don't care if gate_selected is unknown
+                                    # as long as filament is detected at the head, it must be the only gate.
+                                    can_skip = (self.gate_selected == gate) or (is_single_gate and gate == current_sys_gate)
+                                    
+                                    if can_skip:
+                                        # Perform a "Sensor Reconcile" instead of a blind skip.
+                                        if self._reconcile_filament_pos_from_sensors():
+                                            self.log_info("Gate %d state reconciled from sensors for System %d, skipping physical check" % (gate, sys_id))
+                                            self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
+                                            continue
                                 filtered_gates_tools.append([gate, tool])
                             self.mmu_toolhead.update_active_system(pre_check_system_id)
                             gates_tools = filtered_gates_tools
