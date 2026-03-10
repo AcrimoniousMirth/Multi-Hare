@@ -259,8 +259,8 @@ class Mmu:
         if sys and sys.get('form_tip_macro'):
             macro = sys['form_tip_macro']
             if macro.lower() == 'none': return 'none'
-            return macro
-        return getattr(self, '_form_tip_macro', '')
+            if macro: return macro
+        return getattr(self, '_form_tip_macro', '_MMU_FORM_TIP')
 
     @form_tip_macro.setter
     def form_tip_macro(self, value):
@@ -307,6 +307,21 @@ class Mmu:
         # Detect Kalico (Danger Klipper) installation
         self.kalico = bool(self.printer.lookup_object('danger_options', False))
 
+        # Internal macro overrides
+        self.pause_macro = config.get('pause_macro', 'PAUSE')
+        self.action_changed_macro = config.get('action_changed_macro', '_MMU_ACTION_CHANGED')
+        self.print_state_changed_macro = config.get('print_state_changed_macro', '_MMU_PRINT_STATE_CHANGED')
+        self.mmu_event_macro = config.get('mmu_event_macro', '_MMU_EVENT')
+        self.form_tip_macro = config.get('form_tip_macro', '_MMU_FORM_TIP').replace("'", "")
+        self.purge_macro = config.get('purge_macro', '').replace("'", "")
+        self.pre_unload_macro = config.get('pre_unload_macro', '_MMU_PRE_UNLOAD').replace("'", "")
+        self.post_form_tip_macro = config.get('post_form_tip_macro', '_MMU_POST_FORM_TIP').replace("'", "")
+        self.post_unload_macro = config.get('post_unload_macro', '_MMU_POST_UNLOAD').replace("'", "")
+        self.pre_load_macro = config.get('pre_load_macro', '_MMU_PRE_LOAD').replace("'", "")
+        self.post_load_macro = config.get('post_load_macro', '_MMU_POST_LOAD_MACRO').replace("'", "")
+        self.unload_sequence_macro = config.get('unload_sequence_macro', '_MMU_UNLOAD_SEQUENCE').replace("'", "")
+        self.load_sequence_macro = config.get('load_sequence_macro', '_MMU_LOAD_SEQUENCE').replace("'", "")
+
         # Setup remaining hardware like MMU toolhead --------------------------------------------------------
         # We setup MMU hardware during configuration since some hardware like endstop requires
         # configuration during the MCU config phase, which happens before klipper connection
@@ -346,20 +361,6 @@ class Mmu:
         self.skip_cal_encoder = config.getint('skip_cal_encoder', 0, minval=0, maxval=1)
         self.autotune_encoder = config.getint('autotune_encoder', 0, minval=0, maxval=1) # Not exposed TODO placeholder for implementation
 
-        # Internal macro overrides
-        self.pause_macro = config.get('pause_macro', 'PAUSE')
-        self.action_changed_macro = config.get('action_changed_macro', '_MMU_ACTION_CHANGED')
-        self.print_state_changed_macro = config.get('print_state_changed_macro', '_MMU_PRINT_STATE_CHANGED')
-        self.mmu_event_macro = config.get('mmu_event_macro', '_MMU_EVENT')
-        self.form_tip_macro = config.get('form_tip_macro', '_MMU_FORM_TIP').replace("'", "")
-        self.purge_macro = config.get('purge_macro', '').replace("'", "")
-        self.pre_unload_macro = config.get('pre_unload_macro', '_MMU_PRE_UNLOAD').replace("'", "")
-        self.post_form_tip_macro = config.get('post_form_tip_macro', '_MMU_POST_FORM_TIP').replace("'", "")
-        self.post_unload_macro = config.get('post_unload_macro', '_MMU_POST_UNLOAD').replace("'", "")
-        self.pre_load_macro = config.get('pre_load_macro', '_MMU_PRE_LOAD').replace("'", "")
-        self.post_load_macro = config.get('post_load_macro', '_MMU_POST_LOAD_MACRO').replace("'", "")
-        self.unload_sequence_macro = config.get('unload_sequence_macro', '_MMU_UNLOAD_SEQUENCE').replace("'", "")
-        self.load_sequence_macro = config.get('load_sequence_macro', '_MMU_LOAD_SEQUENCE').replace("'", "")
 
         # These macros are not currently exposed but provide future flexability
         self.error_dialog_macro = config.get('error_dialog_macro', '_MMU_ERROR_DIALOG') # Not exposed
