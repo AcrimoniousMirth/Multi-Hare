@@ -114,7 +114,7 @@ class MmuLeds:
         self.exit_effect = config.get('exit_effect', 'gate_status')
         self.entry_effect = config.get('entry_effect', 'filament_color')
         self.status_effect = config.get('status_effect', 'filament_color')
-        self.logo_effect = MmuLeds.string_to_rgb(config.get('logo_effect', '(0,0,0.3)'))
+        self.logo_effect = config.get('logo_effect', 'off')
         self.white_light = MmuLeds.string_to_rgb(config.get('white_light', '(1,1,1)'))
         self.black_light = MmuLeds.string_to_rgb(config.get('black_light', '(0.01,0,0.02)'))
         self.empty_light = MmuLeds.string_to_rgb(config.get('empty_light', '(0,0,0)'))
@@ -199,6 +199,8 @@ class MmuLeds:
     def string_to_rgb(rgb_string):
         if not isinstance(rgb_string, tuple):
             rgb = re.sub(r"[\"'()]", '', rgb_string) # Clean up strings
+            if rgb.lower() == 'off':
+                return (0, 0, 0)
             rgb = tuple(float(x) for x in rgb.split(','))
         else:
            rgb = rgb_string
