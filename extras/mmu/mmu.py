@@ -5073,6 +5073,8 @@ class Mmu:
             self._random_failure() # Testing
             self.movequeues_wait()
             self._set_filament_pos_state(self.FILAMENT_POS_LOADED)
+            if not use_retract:
+                self.gcode.run_script_from_command("SET_GCODE_VARIABLE MACRO=_MMU_PARK VARIABLE=retracted_length VALUE=0")
             self.log_debug("Filament should be loaded to nozzle")
             return homing_movement # Will only have value if we have toolhead sensor
 
@@ -5243,8 +5245,15 @@ class Mmu:
                     raise MmuError("Cannot load extruder because already in extruder. Unload first")
 
             elif start_filament_pos >= self.FILAMENT_POS_LOADED:
-                self.log_debug("Assertion failure: Already LOADED in load_sequence()")
-                raise MmuError("Cannot load because already loaded. Unload first")
+                # Multi-Hare: Support refill homing even if already LOADED
+                if not use_retract and self.sensor_manager.has_sensor(self.SENSOR_TOOLHEAD):
+                    self.log_debug("Filament already LOADED, performing refill sequence")
+                    hm = self._load_extruder(use_retract=False)
+                    if hm is not None:
+                        homing_movement = (homing_movement or 0) + hm
+                else:
+                    self.log_debug("Assertion failure: Already LOADED in load_sequence()")
+                    raise MmuError("Cannot load because already loaded. Unload first")
 
             else:
                 if start_filament_pos <= self.FILAMENT_POS_UNLOADED:
@@ -7104,9 +7113,10 @@ class Mmu:
                                         prev_tool = self.tool_selected
 
                                     if self.filament_pos != self.FILAMENT_POS_UNLOADED:
-                                        # Multi-Hare: For System 0, skip unload if filament is confirmed present in the path
+                                        # Multi-Hare: For System 0, skip unload to gate.
+                                        # Filament remains in toolhead (at retracted parking distance) while idle.
                                         if self.system_active == 0 and self.sensor_manager.check_all_sensors_in_path():
-                                            self.log_info("System 0: Filament confirmed in path, skipping unload for reload")
+                                            self.log_info("System 0: Skipping unload to gate, filament will remain in toolhead")
                                         else:
                                             self._unload_tool(form_tip=do_form_tip, prev_tool=prev_tool)
                                     self._select_and_load_tool(tool, purge=do_purge)
