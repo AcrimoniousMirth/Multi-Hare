@@ -664,6 +664,14 @@ class MmuToolHead(toolhead.ToolHead, object):
         mmu.extruder_name = self.extruder_name
         self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
+        # Multi-Hare: Sync sensor manager state to the new system ID
+        # This is critical for sensor skip-logic in MMU_PRINT_START to work.
+        mmu.sensor_manager.reset_active_unit(system_id)
+        mmu.sensor_manager.reset_active_gate(mmu.gate_selected)
+        
+        # Multi-Hare: Sync Tip Forming Logic based on system capabilities
+        mmu.form_tip_macro = sys.get('form_tip_macro', '_MMU_FORM_TIP').replace("'", "")
+
         # 5. Load NEW system state
         var_pos = "%s_%d" % (mmu.VARS_MMU_FILAMENT_POS, system_id)
         var_gate = "%s_%d" % (mmu.VARS_MMU_GATE_SELECTED, system_id)
@@ -703,8 +711,8 @@ class MmuToolHead(toolhead.ToolHead, object):
         mmu.save_variable(mmu.VARS_MMU_TOOL_SELECTED, mmu.tool_selected, global_only=True)
         mmu.save_variable(mmu.VARS_MMU_FILAMENT_REMAINING, mmu.filament_remaining, global_only=True)
 
-        mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d)" % 
-                           (self.toolhead_name, self.extruder_name, mmu.filament_pos))
+        mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d, Macro: %s)" % 
+                           (self.toolhead_name, self.extruder_name, mmu.filament_pos, mmu.form_tip_macro))
 
         # Synchronize Klipper's active extruder so G1 E commands go to the correct toolhead
         try:
