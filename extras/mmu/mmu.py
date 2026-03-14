@@ -4971,7 +4971,7 @@ class Mmu:
                 # The remaining load distance is relative to the toolhead sensor
                 if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD):
                     self.log_info("Filament already at toolhead sensor, backing off to re-home")
-                    self.trace_filament_move("Backing off toolhead sensor", -30.0, motor=motor, homing_move=-1, endstop_name=self.SENSOR_TOOLHEAD)
+                    self.trace_filament_move("Backing off toolhead sensor", -self.toolhead_sensor_to_nozzle, motor=motor, homing_move=-1, endstop_name=self.SENSOR_TOOLHEAD)
 
                 self.log_debug("Homing up to %.1fmm to toolhead sensor%s" % (self.toolhead_homing_max, (" (synced)" if synced else "")))
                 actual, fhomed, measured, _ = self.trace_filament_move("Homing to toolhead sensor", self.toolhead_homing_max, motor=motor, homing_move=1, endstop_name=self.SENSOR_TOOLHEAD)
