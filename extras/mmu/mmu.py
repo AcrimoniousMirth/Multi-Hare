@@ -760,9 +760,9 @@ class Mmu:
         if not os.path.exists(systems_path):
             systems_path = os.path.expanduser("~/klipper_config/mmu/base/systems.conf")
         
-        # Fallback for the path provided by the user in this specific environment
         if not os.path.exists(systems_path):
-            systems_path = "/Users/sam/Downloads/Toolchanger Work/config/mmu/base/systems.conf"
+            # Fallback to config delivered with software
+            systems_path = os.path.join(os.path.dirname(__file__), "../../config/base/systems.conf")
 
         try:
             import configparser

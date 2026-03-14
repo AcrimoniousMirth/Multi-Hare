@@ -187,7 +187,7 @@ class MmuSensorManager:
 
     # Return sensor state or None if not installed
     def check_sensor(self, name):
-        sensor = self.sensors.get(name, None)
+        sensor = self.sensors.get(name, self.viewable_sensors.get(name))
         if sensor is not None and sensor.runout_helper.sensor_enabled:
             detected = bool(sensor.runout_helper.filament_present)
             return detected
