@@ -3635,6 +3635,10 @@ class Mmu:
     def _set_filament_pos_state(self, state, silent=False):
         if self.filament_pos != state:
             self.filament_pos = state
+            if state == self.FILAMENT_POS_LOADED:
+                # Synchronize G-code state if we've reached the nozzle
+                self.gcode.run_script_from_command("SET_GCODE_VARIABLE MACRO=_MMU_PARK VARIABLE=retracted_length VALUE=0")
+
             if self.gate_selected != self.TOOL_GATE_BYPASS or state == self.FILAMENT_POS_UNLOADED or state == self.FILAMENT_POS_LOADED:
                 self._display_visual_state(silent=silent)
 
@@ -4940,7 +4944,8 @@ class Mmu:
 
     # Move filament from the extruder gears (entrance) to the nozzle
     # Returns any homing distance for automatic calibration logic
-    def _load_extruder(self, extruder_only=False):
+    def _load_extruder(self, extruder_only=False, use_retract=True):
+        homing_movement = None
         with self.wrap_action(self.ACTION_LOADING_EXTRUDER):
             self.log_debug("Loading filament into extruder")
             self._set_filament_direction(self.DIRECTION_LOAD)
@@ -4989,7 +4994,9 @@ class Mmu:
 
             # Length may be reduced by previous unload in filament cutting use case. Ensure reduction is used only one time
             d = self.toolhead_sensor_to_nozzle if has_toolhead else self.toolhead_extruder_to_nozzle
-            length = max(d - self.filament_remaining - self.toolhead_residual_filament - self.toolhead_ooze_reduction - self.toolchange_retract, 0)
+            # Multi-Hare: Optionally ignore retract to load all the way to nozzle
+            retract = self.toolchange_retract if use_retract else 0.
+            length = max(d - self.filament_remaining - self.toolhead_residual_filament - self.toolhead_ooze_reduction - retract, 0)
 
             # If we have a compression sensor indicating compression we can detect failure in the critical extruder entrance transition
             # by performing the initial load with just the extruder motor and checking that the sensor un-triggers before continuing
@@ -5179,7 +5186,7 @@ class Mmu:
 # LOAD / UNLOAD SEQUENCES AND FILAMENT TESTS #
 ##############################################
 
-    def load_sequence(self, bowden_move=None, skip_extruder=False, purge=None, extruder_only=False):
+    def load_sequence(self, bowden_move=None, skip_extruder=False, purge=None, extruder_only=False, use_retract=True):
         self.movequeues_wait()
 
         bowden_length = self.calibration_manager.get_bowden_length() # -1 if not calibrated
@@ -5230,7 +5237,7 @@ class Mmu:
 
             elif extruder_only:
                 if start_filament_pos < self.FILAMENT_POS_EXTRUDER_ENTRY:
-                    _ = self._load_extruder(extruder_only=True)
+                    _ = self._load_extruder(extruder_only=True, use_retract=use_retract)
                 else:
                     self.log_debug("Assertion failure: Unexpected state %d in load_sequence(extruder_only=True)" % start_filament_pos)
                     raise MmuError("Cannot load extruder because already in extruder. Unload first")
@@ -5266,7 +5273,7 @@ class Mmu:
                             homing_movement = (homing_movement or 0) + hm
 
                 if not skip_extruder:
-                    hm = self._load_extruder()
+                    hm = self._load_extruder(use_retract=use_retract)
                     if hm is not None:
                         homing_movement = (homing_movement or 0) + hm
 
@@ -6473,7 +6480,7 @@ class Mmu:
                 else:
                     raise MmuError("Gate %d is empty (and EndlessSpool on load is disabled)\nLoad gate, remap tool to another gate or correct state with 'MMU_CHECK_GATE GATE=%d' or 'MMU_GATE_MAP GATE=%d AVAILABLE=1'" % (gate, gate, gate))
 
-            self.load_sequence(purge=purge)
+            self.load_sequence(purge=purge, use_retract=False)
             self._restore_tool_override(self.tool_selected) # Restore M220 and M221 overrides
 
         finally:
@@ -7153,7 +7160,7 @@ class Mmu:
                     self._note_toolchange("> %s" % self.selected_tool_string())
 
                     if extruder_only:
-                        self.load_sequence(bowden_move=0., extruder_only=True, purge=do_purge)
+                        self.load_sequence(bowden_move=0., extruder_only=True, purge=do_purge, use_retract=False)
 
                     else:
                         self._next_tool = self.tool_selected # Valid only during the load process - cleared in _continue_after()
@@ -7480,6 +7487,8 @@ class Mmu:
                 return
 
             if loaded == 1:
+                # Synchronize G-code state if we've explicitly loaded to the nozzle
+                self.gcode.run_script_from_command("SET_GCODE_VARIABLE MACRO=_MMU_PARK VARIABLE=retracted_length VALUE=0")
                 self._set_filament_direction(self.DIRECTION_LOAD)
                 self._set_filament_pos_state(self.FILAMENT_POS_LOADED)
             elif loaded == 0:
