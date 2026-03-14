@@ -7100,7 +7100,11 @@ class Mmu:
                                         prev_tool = self.tool_selected
 
                                     if self.filament_pos != self.FILAMENT_POS_UNLOADED:
-                                        self._unload_tool(form_tip=do_form_tip, prev_tool=prev_tool)
+                                        # Multi-Hare: For System 0, skip unload if filament is confirmed present in the path
+                                        if self.system_active == 0 and self.sensor_manager.check_all_sensors_in_path():
+                                            self.log_info("System 0: Filament confirmed in path, skipping unload for reload")
+                                        else:
+                                            self._unload_tool(form_tip=do_form_tip, prev_tool=prev_tool)
                                     self._select_and_load_tool(tool, purge=do_purge)
                                     break
                                 except MmuError as ee:
