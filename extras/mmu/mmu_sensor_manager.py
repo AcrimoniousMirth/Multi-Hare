@@ -108,12 +108,12 @@ class MmuSensorManager:
             sensor_name_map = {
                 self.mmu.SENSOR_PRE_GATE_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_PRE_GATE_PREFIX, gate),
                 self.mmu.SENSOR_GEAR_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_GEAR_PREFIX, gate),
-                self.mmu.SENSOR_GATE: sys.get('gate'),
+                self.mmu.SENSOR_GATE: sys.get('gate') or self.get_mapped_endstop_name(self.mmu.SENSOR_GATE),
                 self.mmu.SENSOR_COMPRESSION: sys.get('compression_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_COMPRESSION),
                 self.mmu.SENSOR_TENSION: sys.get('tension_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_TENSION),
                 self.mmu.SENSOR_PROPORTIONAL: sys.get('proportional_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_PROPORTIONAL),
-                self.mmu.SENSOR_EXTRUDER_ENTRY: sys.get('extruder_sensor') or self.mmu.SENSOR_EXTRUDER_ENTRY,
-                self.mmu.SENSOR_TOOLHEAD: sys.get('toolhead_sensor') or self.mmu.SENSOR_TOOLHEAD
+                self.mmu.SENSOR_EXTRUDER_ENTRY: sys.get('extruder_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_EXTRUDER_ENTRY),
+                self.mmu.SENSOR_TOOLHEAD: sys.get('toolhead_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_TOOLHEAD)
             }
         else:
             sensor_name_map = {
@@ -123,8 +123,8 @@ class MmuSensorManager:
                 self.mmu.SENSOR_COMPRESSION: self.get_mapped_endstop_name(self.mmu.SENSOR_COMPRESSION),
                 self.mmu.SENSOR_TENSION: self.get_mapped_endstop_name(self.mmu.SENSOR_TENSION),
                 self.mmu.SENSOR_PROPORTIONAL: self.get_mapped_endstop_name(self.mmu.SENSOR_PROPORTIONAL),
-                self.mmu.SENSOR_EXTRUDER_ENTRY: self.mmu.SENSOR_EXTRUDER_ENTRY,
-                self.mmu.SENSOR_TOOLHEAD: self.mmu.SENSOR_TOOLHEAD
+                self.mmu.SENSOR_EXTRUDER_ENTRY: self.get_mapped_endstop_name(self.mmu.SENSOR_EXTRUDER_ENTRY),
+                self.mmu.SENSOR_TOOLHEAD: self.get_mapped_endstop_name(self.mmu.SENSOR_TOOLHEAD)
             }
         self.mmu.log_always("MMU: Sensor manager: Available sensors in all_sensors: %s" % list(self.all_sensors.keys()))
         self.viewable_sensors = {}
