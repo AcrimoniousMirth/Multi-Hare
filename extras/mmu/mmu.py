@@ -4970,15 +4970,11 @@ class Mmu:
                 # With toolhead sensor for accuracy we always first home to toolhead sensor past the extruder entrance
                 # The remaining load distance is relative to the toolhead sensor
                 if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD):
-                    if self.filament_pos < self.FILAMENT_POS_HOMED_TS:
-                         raise MmuError("Possible toolhead sensor malfunction - filament detected before it entered extruder")
-                    else:
-                         self.log_debug("Filament already at toolhead sensor, skipping homing move")
-                         fhomed = True
-                         actual = 0
-                else:
-                    self.log_debug("Homing up to %.1fmm to toolhead sensor%s" % (self.toolhead_homing_max, (" (synced)" if synced else "")))
-                    actual,fhomed,measured,_ = self.trace_filament_move("Homing to toolhead sensor", self.toolhead_homing_max, motor=motor, homing_move=1, endstop_name=self.SENSOR_TOOLHEAD)
+                    self.log_info("Filament already at toolhead sensor, backing off to re-home")
+                    self.trace_filament_move("Backing off toolhead sensor", -30.0, motor=motor, homing_move=-1, endstop_name=self.SENSOR_TOOLHEAD)
+
+                self.log_debug("Homing up to %.1fmm to toolhead sensor%s" % (self.toolhead_homing_max, (" (synced)" if synced else "")))
+                actual, fhomed, measured, _ = self.trace_filament_move("Homing to toolhead sensor", self.toolhead_homing_max, motor=motor, homing_move=1, endstop_name=self.SENSOR_TOOLHEAD)
                 
                 if fhomed:
                     self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
