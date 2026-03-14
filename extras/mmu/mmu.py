@@ -4975,6 +4975,7 @@ class Mmu:
                     else:
                          self.log_debug("Filament already at toolhead sensor, skipping homing move")
                          fhomed = True
+                         actual = 0
                 else:
                     self.log_debug("Homing up to %.1fmm to toolhead sensor%s" % (self.toolhead_homing_max, (" (synced)" if synced else "")))
                     actual,fhomed,measured,_ = self.trace_filament_move("Homing to toolhead sensor", self.toolhead_homing_max, motor=motor, homing_move=1, endstop_name=self.SENSOR_TOOLHEAD)
