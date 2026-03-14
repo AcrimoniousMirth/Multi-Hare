@@ -382,10 +382,12 @@ class Mmu:
         self.default_gate_speed_override = list(config.getintlist('gate_speed_override', []))
 
         # Configuration for gate loading and unloading
-        self.gate_homing_endstop = config.getchoice('gate_homing_endstop', {o: o for o in self.GATE_ENDSTOPS}, self.SENSOR_ENCODER)
+        self.gate_homing_max = config.getfloat('gate_homing_max', 50., above=10.)
+        choices = {o: o for o in self.GATE_ENDSTOPS}
+        choices["extruder"] = self.SENSOR_EXTRUDER_ENTRY # Backward compatibility alias
+        self.gate_homing_endstop = config.getchoice('gate_homing_endstop', choices, self.SENSOR_GATE)
         self.gate_endstop_to_encoder = config.getfloat('gate_endstop_to_encoder', 0., minval=0.)
         self.gate_unload_buffer = config.getfloat('gate_unload_buffer', 30., minval=0.) # How far to short bowden move to avoid overshooting the gate
-        self.gate_homing_max = config.getfloat('gate_homing_max', 2 * self.gate_unload_buffer, minval=self.gate_unload_buffer)
         self.gate_preload_homing_max = config.getfloat('gate_preload_homing_max', self.gate_homing_max)
         self.gate_parking_distance = config.getfloat('gate_parking_distance', 23.) # Can be +ve or -ve
         self.gate_preload_parking_distance = config.getfloat('gate_preload_parking_distance', -10.) # Can be +ve or -ve
@@ -407,7 +409,9 @@ class Mmu:
 
         # Configuration for extruder and toolhead homing
         self.extruder_force_homing = config.getint('extruder_force_homing', 0, minval=0, maxval=1)
-        self.extruder_homing_endstop = config.getchoice('extruder_homing_endstop', {o: o for o in self.EXTRUDER_ENDSTOPS}, self.SENSOR_EXTRUDER_NONE)
+        choices = {o: o for o in self.EXTRUDER_ENDSTOPS}
+        choices["extruder"] = self.SENSOR_EXTRUDER_ENTRY # Backward compatibility alias
+        self.extruder_homing_endstop = config.getchoice('extruder_homing_endstop', choices, self.SENSOR_EXTRUDER_NONE)
         self.extruder_homing_max = config.getfloat('extruder_homing_max', 50., above=10.) # Extruder homing max
         self.extruder_homing_buffer = config.getfloat('extruder_homing_buffer', 30., minval=0.) # How far to short bowden load move to avoid overshooting
         self.extruder_collision_homing_step = config.getint('extruder_collision_homing_step', 3,  minval=2, maxval=5)
