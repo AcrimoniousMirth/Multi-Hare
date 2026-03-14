@@ -629,11 +629,13 @@ class MmuToolHead(toolhead.ToolHead, object):
         if not hasattr(self, 'printer_toolhead'): return # Too early
         
         # Multi-Hare: Save current system state before switching
+        # We MUST use the system_id of the CURRENTLY active system for the variable suffix
         if hasattr(self.mmu, 'system_active'):
-             self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_POS, self.mmu.filament_pos)
-             self.mmu.save_variable(self.mmu.VARS_MMU_GATE_SELECTED, self.mmu.gate_selected)
-             self.mmu.save_variable(self.mmu.VARS_MMU_TOOL_SELECTED, self.mmu.tool_selected)
-             self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_REMAINING, self.mmu.filament_remaining)
+             prev_system_id = self.mmu.system_active
+             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, prev_system_id), self.mmu.filament_pos)
+             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_GATE_SELECTED, prev_system_id), self.mmu.gate_selected)
+             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_TOOL_SELECTED, prev_system_id), self.mmu.tool_selected)
+             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_FILAMENT_REMAINING, prev_system_id), self.mmu.filament_remaining)
 
         if system_id is None:
             current_gate = getattr(self.mmu, 'gate_selected', self.mmu.TOOL_GATE_UNKNOWN)
@@ -664,9 +666,16 @@ class MmuToolHead(toolhead.ToolHead, object):
         var_tool = "%s_%d" % (self.mmu.VARS_MMU_TOOL_SELECTED, system_id)
         var_rem = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_REMAINING, system_id)
         
-        self.mmu.filament_pos = self.mmu.save_variables.allVariables.get(var_pos, self.mmu.FILAMENT_POS_UNKNOWN)
-        self.mmu.gate_selected = self.mmu.save_variables.allVariables.get(var_gate, self.mmu.TOOL_GATE_UNKNOWN)
-        self.mmu.tool_selected = self.mmu.save_variables.allVariables.get(var_tool, self.mmu.TOOL_GATE_UNKNOWN)
+        # Only load if the current variables are "Unknown" or we are forcing a switch.
+        # This prevents clobbering a just-updated state (like from MMU_SELECT) with stale data.
+        if self.mmu.filament_pos == self.mmu.FILAMENT_POS_UNKNOWN:
+            self.mmu.filament_pos = self.mmu.save_variables.allVariables.get(var_pos, self.mmu.FILAMENT_POS_UNKNOWN)
+        if self.mmu.gate_selected == self.mmu.TOOL_GATE_UNKNOWN:
+            self.mmu.gate_selected = self.mmu.save_variables.allVariables.get(var_gate, self.mmu.TOOL_GATE_UNKNOWN)
+        if self.mmu.tool_selected == self.mmu.TOOL_GATE_UNKNOWN:
+            self.mmu.tool_selected = self.mmu.save_variables.allVariables.get(var_tool, self.mmu.TOOL_GATE_UNKNOWN)
+        
+        # Always reload remaining filament for the new system
         self.mmu.filament_remaining = self.mmu.save_variables.allVariables.get(var_rem, 0.0)
 
         # Multi-Hare: Force Klipper's generic variables to reflect the active system's state visually and programmatically
