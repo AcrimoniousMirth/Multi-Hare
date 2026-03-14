@@ -114,14 +114,14 @@ class Mmu:
 
     SENSOR_EXTRUDER_NONE       = "none"           # Fake Extruder endstop aka don't attempt home
     SENSOR_EXTRUDER_COLLISION  = "collision"      # Fake Extruder endstop
-    SENSOR_EXTRUDER_ENTRY      = "extruder"       # Extruder entry sensor
+    SENSOR_EXTRUDER_ENTRY      = "mmu_extruder"   # Extruder entry sensor
     SENSOR_GEAR_TOUCH          = "mmu_gear_touch" # Stallguard based detection
 
     SENSOR_COMPRESSION         = "filament_compression"  # Filament sync-feedback compression detection
     SENSOR_TENSION             = "filament_tension"      # Filament sync-feedback tension detection
     SENSOR_PROPORTIONAL        = "filament_proportional" # Proportional sync-feedback sensor
 
-    SENSOR_TOOLHEAD            = "toolhead"
+    SENSOR_TOOLHEAD            = "mmu_toolhead"
     SENSOR_EXTRUDER_TOUCH      = "mmu_ext_touch"
 
     SENSOR_SELECTOR_TOUCH      = "mmu_sel_touch"  # For LinearSelector and LinearServoSelector
