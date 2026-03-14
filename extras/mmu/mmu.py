@@ -117,9 +117,9 @@ class Mmu:
     SENSOR_EXTRUDER_ENTRY      = "mmu_extruder"   # Extruder entry sensor
     SENSOR_GEAR_TOUCH          = "mmu_gear_touch" # Stallguard based detection
 
-    SENSOR_COMPRESSION         = "filament_compression"  # Filament sync-feedback compression detection
-    SENSOR_TENSION             = "filament_tension"      # Filament sync-feedback tension detection
-    SENSOR_PROPORTIONAL        = "filament_proportional" # Proportional sync-feedback sensor
+    SENSOR_COMPRESSION         = "mmu_filament_compression"  # Filament sync-feedback compression detection
+    SENSOR_TENSION             = "mmu_filament_tension"      # Filament sync-feedback tension detection
+    SENSOR_PROPORTIONAL        = "mmu_filament_proportional" # Proportional sync-feedback sensor
 
     SENSOR_TOOLHEAD            = "mmu_toolhead"
     SENSOR_EXTRUDER_TOUCH      = "mmu_ext_touch"
