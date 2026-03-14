@@ -628,33 +628,31 @@ class MmuToolHead(toolhead.ToolHead, object):
     def update_active_system(self, system_id=None):
         if not hasattr(self, 'printer_toolhead'): return # Too early
         
-        # Multi-Hare: Force load state from disk if we are actually switching
-        is_switch = False
-        if system_id is not None and hasattr(self.mmu, 'system_active') and system_id != self.mmu.system_active:
-            is_switch = True
-
-        # 1. Save PREVIOUS system state before switching
-        if hasattr(self.mmu, 'system_active'):
-             prev_sys_id = self.mmu.system_active
-             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, prev_sys_id), self.mmu.filament_pos)
-             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_GATE_SELECTED, prev_sys_id), self.mmu.gate_selected)
-             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_TOOL_SELECTED, prev_sys_id), self.mmu.tool_selected)
-             self.mmu.save_variable("%s_%d" % (self.mmu.VARS_MMU_FILAMENT_REMAINING, prev_sys_id), self.mmu.filament_remaining)
-
-        # 2. Determine and sets the NEW system ID
+        mmu = self.mmu
+        
+        # 1. Determine the target system ID
         if system_id is None:
-            current_gate = getattr(self.mmu, 'gate_selected', self.mmu.TOOL_GATE_UNKNOWN)
-            if current_gate == self.mmu.TOOL_GATE_UNKNOWN:
+            current_gate = getattr(mmu, 'gate_selected', mmu.TOOL_GATE_UNKNOWN)
+            if current_gate == mmu.TOOL_GATE_UNKNOWN:
                 system_id = 0
             else:
-                system_id = self.mmu.get_system_id(current_gate)
+                system_id = mmu.get_system_id(current_gate)
         
-        if hasattr(self.mmu, 'system_active') and system_id != self.mmu.system_active:
-            is_switch = True
-        self.mmu.system_active = system_id
+        is_switch = hasattr(mmu, 'system_active') and system_id != mmu.system_active
         
-        # 3. Update Hardware Names and references (Extruder, Toolhead)
-        sys = self.mmu.get_active_system()
+        # 2. Save PREVIOUS system state before switching IDs
+        # save_variable() in mmu.py handles the _0, _1 suffixing automatically based on system_active
+        if is_switch:
+             mmu.save_variable(mmu.VARS_MMU_FILAMENT_POS, mmu.filament_pos)
+             mmu.save_variable(mmu.VARS_MMU_GATE_SELECTED, mmu.gate_selected)
+             mmu.save_variable(mmu.VARS_MMU_TOOL_SELECTED, mmu.tool_selected)
+             mmu.save_variable(mmu.VARS_MMU_FILAMENT_REMAINING, mmu.filament_remaining)
+        
+        # 3. Apply the switch
+        mmu.system_active = system_id
+        
+        # 4. Update Hardware references (Extruder, Toolhead)
+        sys = mmu.get_active_system()
         if not sys: return
         
         self.extruder_name = sys.get('extruder', 'extruder')
@@ -663,53 +661,56 @@ class MmuToolHead(toolhead.ToolHead, object):
         if self.extruder_name in self.system_extruder_steppers:
             self.mmu_extruder_stepper = self.system_extruder_steppers[self.extruder_name]
         
-        self.mmu.extruder_name = self.extruder_name
+        mmu.extruder_name = self.extruder_name
         self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
-        # 4. Load NEW system state
-        var_pos = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_POS, system_id)
-        var_gate = "%s_%d" % (self.mmu.VARS_MMU_GATE_SELECTED, system_id)
-        var_tool = "%s_%d" % (self.mmu.VARS_MMU_TOOL_SELECTED, system_id)
-        var_rem = "%s_%d" % (self.mmu.VARS_MMU_FILAMENT_REMAINING, system_id)
+        # 5. Load NEW system state
+        var_pos = "%s_%d" % (mmu.VARS_MMU_FILAMENT_POS, system_id)
+        var_gate = "%s_%d" % (mmu.VARS_MMU_GATE_SELECTED, system_id)
+        var_tool = "%s_%d" % (mmu.VARS_MMU_TOOL_SELECTED, system_id)
+        var_rem = "%s_%d" % (mmu.VARS_MMU_FILAMENT_REMAINING, system_id)
         
-        # If switching, we MUST reload state because current memory belongs to OLD system.
+        # If switching systems, we MUST reload state because current memory belongs to OLD system.
         # If refreshing current, only load if state is UNKNOWN.
-        if is_switch or self.mmu.filament_pos == self.mmu.FILAMENT_POS_UNKNOWN:
-            new_pos = self.mmu.save_variables.allVariables.get(var_pos, self.mmu.FILAMENT_POS_UNKNOWN)
-            if is_switch or self.mmu.filament_pos != new_pos:
-                self.mmu.filament_pos = new_pos
-                # Sync rail position for the new system to prevent desync (e.g. -350mm)
-                if self.mmu.filament_pos in [self.mmu.FILAMENT_POS_LOADED, self.mmu.FILAMENT_POS_UNLOADED]:
+        if is_switch or mmu.filament_pos == mmu.FILAMENT_POS_UNKNOWN:
+            new_pos = mmu.save_variables.allVariables.get(var_pos, mmu.FILAMENT_POS_UNKNOWN)
+            if is_switch or mmu.filament_pos != new_pos:
+                mmu.filament_pos = new_pos
+                # SYNC RAIL POSITION: Accurate synchronization to prevent desync during unload
+                if mmu.filament_pos == mmu.FILAMENT_POS_LOADED:
+                    gate = mmu.save_variables.allVariables.get(var_gate, 0)
+                    if gate == mmu.TOOL_GATE_UNKNOWN: gate = 0
+                    # Calculate total path length from gate to nozzle
+                    nozzle_pos = mmu.calibration_manager.get_bowden_length(gate) + mmu.toolhead_extruder_to_nozzle
+                    self.set_position([0., nozzle_pos, 0., 0.])
+                    mmu.log_debug("Multi-Hare: Synced LOADED rail position to %.1fmm" % nozzle_pos)
+                elif mmu.filament_pos == mmu.FILAMENT_POS_UNLOADED:
                     self.set_position([0., 0., 0., 0.])
+                    mmu.log_debug("Multi-Hare: Synced UNLOADED rail position to 0.0mm")
 
-        if is_switch or self.mmu.gate_selected == self.mmu.TOOL_GATE_UNKNOWN:
-            new_gate = self.mmu.save_variables.allVariables.get(var_gate, self.mmu.TOOL_GATE_UNKNOWN)
-            # Preservation: Only update if current memory is still UNKNOWN
-            if self.mmu.gate_selected == self.mmu.TOOL_GATE_UNKNOWN:
-                self.mmu.gate_selected = new_gate
+        if is_switch or mmu.gate_selected == mmu.TOOL_GATE_UNKNOWN:
+            mmu.gate_selected = mmu.save_variables.allVariables.get(var_gate, mmu.TOOL_GATE_UNKNOWN)
 
-        if is_switch or self.mmu.tool_selected == self.mmu.TOOL_GATE_UNKNOWN:
-            new_tool = self.mmu.save_variables.allVariables.get(var_tool, self.mmu.TOOL_GATE_UNKNOWN)
-            if self.mmu.tool_selected == self.mmu.TOOL_GATE_UNKNOWN:
-                self.mmu.tool_selected = new_tool
+        if is_switch or mmu.tool_selected == mmu.TOOL_GATE_UNKNOWN:
+            mmu.tool_selected = mmu.save_variables.allVariables.get(var_tool, mmu.TOOL_GATE_UNKNOWN)
         
         # Always reload remaining filament for valid tracking
-        self.mmu.filament_remaining = self.mmu.save_variables.allVariables.get(var_rem, 0.0)
+        mmu.filament_remaining = mmu.save_variables.allVariables.get(var_rem, 0.0)
 
         # Multi-Hare: Force Klipper's generic variables to reflect the active system's state visually and programmatically
-        self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_POS, self.mmu.filament_pos, global_only=True)
-        self.mmu.save_variable(self.mmu.VARS_MMU_GATE_SELECTED, self.mmu.gate_selected, global_only=True)
-        self.mmu.save_variable(self.mmu.VARS_MMU_TOOL_SELECTED, self.mmu.tool_selected, global_only=True)
-        self.mmu.save_variable(self.mmu.VARS_MMU_FILAMENT_REMAINING, self.mmu.filament_remaining, global_only=True)
+        mmu.save_variable(mmu.VARS_MMU_FILAMENT_POS, mmu.filament_pos, global_only=True)
+        mmu.save_variable(mmu.VARS_MMU_GATE_SELECTED, mmu.gate_selected, global_only=True)
+        mmu.save_variable(mmu.VARS_MMU_TOOL_SELECTED, mmu.tool_selected, global_only=True)
+        mmu.save_variable(mmu.VARS_MMU_FILAMENT_REMAINING, mmu.filament_remaining, global_only=True)
 
-        self.mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d)" % 
-                           (self.toolhead_name, self.extruder_name, self.mmu.filament_pos))
+        mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d)" % 
+                           (self.toolhead_name, self.extruder_name, mmu.filament_pos))
 
         # Synchronize Klipper's active extruder so G1 E commands go to the correct toolhead
         try:
-            self.mmu.gcode.run_script_from_command("ACTIVATE_EXTRUDER EXTRUDER=%s" % self.extruder_name)
+            mmu.gcode.run_script_from_command("ACTIVATE_EXTRUDER EXTRUDER=%s" % self.extruder_name)
         except Exception as e:
-            self.mmu.log_debug("Failed to activate extruder %s: %s" % (self.extruder_name, str(e)))
+            mmu.log_debug("Failed to activate extruder %s: %s" % (self.extruder_name, str(e)))
 
 
     # Ensure the correct number of axes for convenience - MMU only has two
