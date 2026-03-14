@@ -21,7 +21,7 @@
 #
 # extruder & toolhead sensor:
 #   Wrapper around `filament_switch_sensor` disabling all functionality - just for visability
-#   Named `extruder` & `toolhead`
+#   Named `mmu_extruder` & `mmu_toolhead`
 #
 # sync feedback sensor(s):
 #   Creates buttons handlers (with filament_switch_sensor for visibility and control) and publishes events based on state change
