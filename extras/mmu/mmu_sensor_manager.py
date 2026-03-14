@@ -109,11 +109,11 @@ class MmuSensorManager:
                 self.mmu.SENSOR_PRE_GATE_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_PRE_GATE_PREFIX, gate),
                 self.mmu.SENSOR_GEAR_PREFIX: self.get_gate_sensor_name(self.mmu.SENSOR_GEAR_PREFIX, gate),
                 self.mmu.SENSOR_GATE: sys.get('gate'),
-                self.mmu.SENSOR_COMPRESSION: self.get_mapped_endstop_name(self.mmu.SENSOR_COMPRESSION),
-                self.mmu.SENSOR_TENSION: sys.get('tension_sensor'),
-                self.mmu.SENSOR_PROPORTIONAL: self.get_mapped_endstop_name(self.mmu.SENSOR_PROPORTIONAL),
-                self.mmu.SENSOR_EXTRUDER_ENTRY: sys.get('extruder_sensor'),
-                self.mmu.SENSOR_TOOLHEAD: sys.get('toolhead_sensor')
+                self.mmu.SENSOR_COMPRESSION: sys.get('compression_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_COMPRESSION),
+                self.mmu.SENSOR_TENSION: sys.get('tension_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_TENSION),
+                self.mmu.SENSOR_PROPORTIONAL: sys.get('proportional_sensor') or self.get_mapped_endstop_name(self.mmu.SENSOR_PROPORTIONAL),
+                self.mmu.SENSOR_EXTRUDER_ENTRY: sys.get('extruder_sensor') or self.mmu.SENSOR_EXTRUDER_ENTRY,
+                self.mmu.SENSOR_TOOLHEAD: sys.get('toolhead_sensor') or self.mmu.SENSOR_TOOLHEAD
             }
         else:
             sensor_name_map = {
