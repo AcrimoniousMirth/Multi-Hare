@@ -343,4 +343,20 @@ class MmuSensorManager:
         # Multi-Hare: Include all known hardware sensors with their full names for UI visibility
         for name, sensor in self.all_sensors.items():
             result[name] = bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
+
+        # Multi-Hare: Alias active system sensors to standard names solely for GUI display compatibility
+        active_sys = self.mmu.get_active_system()
+        if active_sys:
+            aliases = {
+                'extruder_sensor': self.mmu.SENSOR_EXTRUDER_ENTRY,
+                'toolhead_sensor': self.mmu.SENSOR_TOOLHEAD,
+                'tension_sensor': self.mmu.SENSOR_TENSION,
+            }
+            for sys_key, alias_name in aliases.items():
+                sensor_name = active_sys.get(sys_key)
+                if sensor_name:
+                    sensor = self.all_sensors.get(sensor_name)
+                    if sensor:
+                        result[alias_name] = bool(sensor.runout_helper.filament_present) if sensor.runout_helper.sensor_enabled else None
+
         return result
