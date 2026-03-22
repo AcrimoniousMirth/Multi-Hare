@@ -685,6 +685,8 @@ class MmuToolHead(toolhead.ToolHead, object):
         if is_switch or mmu.filament_pos == mmu.FILAMENT_POS_UNKNOWN:
             new_pos = mmu.save_variables.allVariables.get(var_pos, mmu.FILAMENT_POS_UNKNOWN)
             if is_switch or mmu.filament_pos != new_pos:
+                mmu.log_debug("Multi-Hare: %s state %d from %s (current: %d)" % 
+                                   ("Switching to" if is_switch else "Reloading", new_pos, var_pos, mmu.filament_pos))
                 mmu.filament_pos = new_pos
                 # SYNC RAIL POSITION: Accurate synchronization to prevent desync during unload
                 if mmu.filament_pos == mmu.FILAMENT_POS_LOADED:

@@ -4016,10 +4016,13 @@ class Mmu:
             if hasattr(self, 'system_active'):
                 # Also save the global generic version if this is the active system to keep Klipper macros in sync
                 self.save_variables.allVariables[variable] = value
+                # Multi-Hare: Force disk write for global copy if requested
+                if write:
+                    self.gcode.run_script_from_command("SAVE_VARIABLE VARIABLE=%s VALUE=%s" % (variable, str(value)))
                 variable = "%s_%d" % (variable, self.system_active)
         self.save_variables.allVariables[variable] = value
         if write:
-            self.write_variables()
+            self.gcode.run_script_from_command("SAVE_VARIABLE VARIABLE=%s VALUE=%s" % (variable, str(value)))
 
     def delete_variable(self, variable, write=False, global_only=False):
         if not global_only and variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
@@ -5768,6 +5771,13 @@ class Mmu:
             adjust = self.gate_speed_override[self.gate_selected] / 100.
             speed *= adjust
             accel *= adjust
+
+        # Multi-Hare Smart Sync: If we think we are moving gear-only but the extruder entry sensor is triggered,
+        # we MUST move in sync to avoid binding or slipping.
+        if motor == "gear" and not self.calibrating:
+             if self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY):
+                 self.log_info("Filament detected at extruder entry, forcing synced move for safety")
+                 motor = "gear+extruder"
 
         def _set_sync_mode(sync_mode):
             self.mmu_toolhead.sync(sync_mode)
