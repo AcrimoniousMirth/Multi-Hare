@@ -716,11 +716,17 @@ class MmuToolHead(toolhead.ToolHead, object):
         mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d, Macro: %s)" % 
                            (self.toolhead_name, self.extruder_name, mmu.filament_pos, mmu.form_tip_macro))
 
-        # Synchronize Klipper's active extruder so G1 E commands go to the correct toolhead
+        # Synchronize Klipper's active extruder and physical toolhead
         try:
+            if is_switch:
+                # 1. Physical Tool Change (if integrated with a toolchanger)
+                tool_num = re.sub("[^0-9]", "", self.toolhead_name)
+                mmu.gcode.run_script_from_command("SELECT_TOOL T=%s" % tool_num)
+            
+            # 2. Extruder Activation
             mmu.gcode.run_script_from_command("ACTIVATE_EXTRUDER EXTRUDER=%s" % self.extruder_name)
         except Exception as e:
-            mmu.log_debug("Failed to activate extruder %s: %s" % (self.extruder_name, str(e)))
+            mmu.log_debug("Failed to sync system %s: %s" % (self.toolhead_name, str(e)))
 
 
     # Ensure the correct number of axes for convenience - MMU only has two
