@@ -3665,13 +3665,19 @@ class Mmu:
             # when the print actually starts (via load_tool -> load_sequence).
             # This handles the "filament is parked" scenario correctly.
             if self.filament_pos != self.FILAMENT_POS_HOMED_TS:
-                self.log_info("Filament detected at toolhead sensor, reconciling state to HOMED_TS for T0 start")
+                self.log_info("Filament detected at toolhead sensor, reconciling state to HOMED_TS")
                 self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
+
+            # Multi-Hare: Set physical position based on toolhead sensor
+            self._set_filament_position(-self.toolhead_sensor_to_nozzle)
             return True
         elif ex_detected:
             if self.filament_pos != self.FILAMENT_POS_HOMED_ENTRY:
                 self.log_info("Filament detected at extruder entry, reconciling state to HOMED_ENTRY")
                 self._set_filament_pos_state(self.FILAMENT_POS_HOMED_ENTRY)
+
+            # Multi-Hare: Set physical position based on extruder entry sensor
+            self._set_filament_position(-(self.toolhead_extruder_to_nozzle + self.toolhead_entry_to_extruder))
             return True
         return False
 
@@ -4675,7 +4681,7 @@ class Mmu:
                 return actual, self.gate_unload_buffer
             msg = "did not home to sensor '%s' after moving %1.fmm" % (self.gate_homing_endstop, homing_max)
 
-        raise MmuError("Failed to unload gate because %s" % msg)
+        raise MmuError("Failed to unload gate %d because %s" % (self.gate_selected, msg))
 
     # Shared with manual bowden calibration routine
     def _reverse_home_to_encoder(self, homing_max):
@@ -9210,8 +9216,8 @@ class Mmu:
                                 self.mmu_toolhead.update_active_system(sys_id)
                                 self._reconcile_filament_pos_from_sensors()
                                 
-                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
-                                    self.log_info("System %d already loaded/homed, marking Gate %d available (skipping check)" % (sys_id, gate))
+                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_HOMED_ENTRY]:
+                                    self.log_info("System %d already loaded/homed/at-entry, marking Gate %d available (skipping check)" % (sys_id, gate))
                                     self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
                                     continue
                                 filtered_gates_tools.append([gate, tool])
@@ -9227,7 +9233,7 @@ class Mmu:
                                 
                                 # Reconcile state (redundant but safe)
                                 self._reconcile_filament_pos_from_sensors()
-                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
+                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_HOMED_ENTRY]:
                                     continue
 
                                 if self.filament_pos != self.FILAMENT_POS_UNLOADED:
