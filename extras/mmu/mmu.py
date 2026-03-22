@@ -4018,11 +4018,12 @@ class Mmu:
                 self.save_variables.allVariables[variable] = value
                 # Multi-Hare: Force disk write for global copy if requested
                 if write:
-                    self.gcode.run_script_from_command("SAVE_VARIABLE VARIABLE=%s VALUE=%s" % (variable, str(value)))
+                    # Using Python API is more robust than G-code command for complex types
+                    self.save_variables.save_variable(variable, value)
                 variable = "%s_%d" % (variable, self.system_active)
         self.save_variables.allVariables[variable] = value
         if write:
-            self.gcode.run_script_from_command("SAVE_VARIABLE VARIABLE=%s VALUE=%s" % (variable, str(value)))
+            self.save_variables.save_variable(variable, value)
 
     def delete_variable(self, variable, write=False, global_only=False):
         if not global_only and variable in [self.VARS_MMU_FILAMENT_POS, self.VARS_MMU_GATE_SELECTED, self.VARS_MMU_TOOL_SELECTED, self.VARS_MMU_FILAMENT_REMAINING]:
