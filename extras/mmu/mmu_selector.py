@@ -179,8 +179,8 @@ class VirtualSelector(BaseSelector, object):
         self.mmu.calibration_status |= self.mmu.CALIBRATED_SELECTOR # No calibration necessary
 
     def select_gate(self, gate):
-        if gate == self.mmu.gate_selected: return
         self.mmu_toolhead.select_gear_stepper(gate) # Select correct drive stepper or none if bypass
+        if gate == self.mmu.gate_selected: return
 
     def restore_gate(self, gate):
         self.mmu.mmu_toolhead.select_gear_stepper(gate) # Select correct drive stepper or none if bypass

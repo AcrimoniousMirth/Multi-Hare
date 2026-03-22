@@ -3660,9 +3660,11 @@ class Mmu:
         ex_detected = self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY)
 
         if th_detected:
-            if self.filament_pos != self.FILAMENT_POS_HOMED_TS:
-                self.log_info("Filament detected at toolhead sensor, reconciling state to HOMED_TS")
-                self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
+            # Multi-Hare: Only reset status if the gate logically belongs to this system
+            if self.gate_selected >= 0 and self.get_system_id(self.gate_selected) == self.system_active:
+                if self.filament_pos != self.FILAMENT_POS_HOMED_TS:
+                    self.log_info("Filament detected at toolhead sensor, reconciling state to HOMED_TS")
+                    self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
 
             # Multi-Hare: Set physical position based on toolhead sensor
             self._set_filament_position(-self.toolhead_sensor_to_nozzle)
@@ -9238,12 +9240,22 @@ class Mmu:
 
                             # Multi-Hare: 1. Identify systems that appear to have filament in them and need clearing
                             involved_systems = set()
+                            
+                            # If Toolhead or Extruder sensors are triggered, we need to clear THAT specific system
                             if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) or self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY):
-                                involved_systems.add(self.get_system_id(self.gate_selected))
+                                active_sys = self.get_system_id(self.gate_selected)
+                                # Optimization: If the already-loaded initial tool is T0, don't unload it just to check others!
+                                if self.filament_pos == self.FILAMENT_POS_LOADED and self.gate_selected == initial_gate:
+                                    self.log_info("Initial tool T%d already loaded, skipping clearing System %d" % (self.get_tool_by_gate(initial_gate), active_sys))
+                                else:
+                                    involved_systems.add(active_sys)
                             
                             required_gates = [g for g, t in filtered_gates_tools]
                             for gate in required_gates:
-                                involved_systems.add(self.get_system_id(gate))
+                                # We only need to clear it if it's NOT the gate we are currently at (to avoid circular unloads)
+                                sys_id = self.get_system_id(gate)
+                                if sys_id != self.system_active:
+                                    involved_systems.add(sys_id)
 
                             for sys_id in sorted(list(involved_systems)):
                                 self.mmu_toolhead.update_active_system(sys_id)

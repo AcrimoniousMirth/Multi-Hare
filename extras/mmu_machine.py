@@ -718,9 +718,9 @@ class MmuToolHead(toolhead.ToolHead, object):
         mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d, Macro: %s)" % 
                            (self.toolhead_name, self.extruder_name, mmu.filament_pos, mmu.form_tip_macro))
 
-        # Multi-Hare: Sync Gear Stepper to the active system's selection
-        if mmu.gate_selected != mmu.TOOL_GATE_UNKNOWN:
-            self.select_gear_stepper(mmu.gate_selected)
+        # Multi-Hare: Only select gear motor if it actually belongs to the system being activated.
+        if mmu.gate_selected >= 0 and mmu.get_system_id(mmu.gate_selected) == system_id:
+             self.select_gear_stepper(mmu.gate_selected)
 
         # Synchronize Klipper's active extruder
         try:
