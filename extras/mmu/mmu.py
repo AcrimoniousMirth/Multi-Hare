@@ -9221,6 +9221,7 @@ class Mmu:
                             orig_system_id = self.system_active
                             for sys_id in involved_systems:
                                 self.mmu_toolhead.update_active_system(sys_id)
+                                self._reconcile_filament_pos_from_sensors()
                                 if self.filament_pos != self.FILAMENT_POS_UNLOADED:
                                     self.log_info("Unloading System %d prior to checking gates" % sys_id)
                                     self._note_toolchange("< %s" % self.selected_tool_string())
