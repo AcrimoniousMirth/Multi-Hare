@@ -3658,7 +3658,7 @@ class Mmu:
     def _get_sensor_name(self, base_name, sys_id=None):
         if sys_id is None:
             sys_id = self.system_active
-        if self.mmu_machine.multisystem:
+        if self.mmu_machine.num_units > 1:
              return "unit_%d_%s" % (sys_id, base_name)
         return base_name
 
