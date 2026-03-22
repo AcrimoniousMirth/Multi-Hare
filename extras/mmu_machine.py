@@ -761,14 +761,27 @@ class MmuToolHead(toolhead.ToolHead, object):
 
         # Surgical reconfiguration for Multi-System support
         # We only want to unsync if the requested 'selected' steppers are currently
-        # participating in a synced print.
+        # participating in a synced print, OR if currently synced steppers are NOT
+        # in the newly requested 'selected' set (meaning they are being swapped out).
         if self.sync_mode is not None:
             # Identify steppers currently bound to the printer toolhead
             synced_steppers = [s for s in self.all_gear_rail_steppers 
                               if s.get_trapq() and s.get_trapq() != mmu_trapq]
             
-            # If the specific stepper we want to move is currently synced, we MUST unsync
-            if any(s.get_name() in (selected or []) for s in synced_steppers):
+            # If any of the new selected steppers are synced, OR if any currently 
+            # synced steppers are NOT part of the new selected list, we MUST unsync.
+            needs_unsync = False
+            for s in synced_steppers:
+                if not selected or s.get_name() not in selected:
+                    needs_unsync = True
+                    break
+            if not needs_unsync:
+                for name in (selected or []):
+                    if any(s.get_name() == name for s in synced_steppers):
+                        needs_unsync = True
+                        break
+
+            if needs_unsync:
                 self._resync_no_lock(None)
             else:
                 # We are doing a background operation on a non-synced stepper.
