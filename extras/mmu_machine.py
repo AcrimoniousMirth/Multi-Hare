@@ -587,6 +587,8 @@ class MmuToolHead(toolhead.ToolHead, object):
         # Bi-directional sync management of gear(s) and extruder(s)
         self.mmu_toolhead = self # Make it easier to read code and distinquish printer_toolhead from mmu_toolhead
         self.sync_mode = None
+        self.synced_gear_steppers = []
+        self.synced_extruder_steppers = []
 
     def handle_connect(self):
         self.printer_toolhead = self.printer.lookup_object('toolhead')
@@ -938,7 +940,7 @@ class MmuToolHead(toolhead.ToolHead, object):
                 driving_toolhead   = self.printer_toolhead    # OLD owner (printer/extruder)
                 following_toolhead = self.mmu_toolhead        # NEW owner (mmu/gear)
                 # All gear-rail steppers were following the extruder
-                following_steppers = following_toolhead.get_kinematics().rails[1].get_steppers()
+                following_steppers = self.synced_gear_steppers
                 old_trapq = driving_toolhead.get_extruder().get_trapq() # trapq we’re finalizing
                 new_trapq = self._prev_trapq                  # trapq saved during sync()
                 pos = [0., following_toolhead.get_position()[1], 0.]
@@ -1021,7 +1023,8 @@ class MmuToolHead(toolhead.ToolHead, object):
         elif new_sync_mode == self.GEAR_SYNCED_TO_EXTRUDER:
             driving_toolhead = self.printer_toolhead     # NEW owner (printer/extruder)
             following_toolhead = self.mmu_toolhead       # OLD owner (mmu/gear)
-            following_steppers = list(following_toolhead.get_kinematics().rails[1].get_steppers())
+            following_steppers = self.selected_gear_steppers
+            self.synced_gear_steppers = following_steppers # Save for unsync Phase B
             self._prev_trapq = following_toolhead.get_trapq()
             driving_trapq = driving_toolhead.get_extruder().get_trapq()
             s_alloc = ffi_lib.extruder_stepper_alloc()
