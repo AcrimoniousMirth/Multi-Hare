@@ -6653,6 +6653,7 @@ class Mmu:
             self.sensor_manager.reset_active_unit(new_unit)
 
         self.sensor_manager.reset_active_gate(self.gate_selected) # Call after unit_selected is set
+        self.mmu_toolhead.select_gear_stepper(gate)
         self.mmu_toolhead.update_active_system() # Update active extruder/toolhead system
         self.sync_feedback_manager.set_default_rd() # Will always set rotation_distance
 
