@@ -3685,16 +3685,17 @@ class Mmu:
         pg_detected = self.sensor_manager.check_gate_sensor(self.SENSOR_PRE_GATE_PREFIX, self.gate_selected) if self.gate_selected >= 0 else False
         
         if gate_detected:
-            if self.filament_pos != self.FILAMENT_POS_UNLOADED:
-                self.log_info("Filament detected at gate %d sensor, reconciling state to UNLOADED" % self.gate_selected)
-                self._set_filament_pos_state(self.FILAMENT_POS_UNLOADED)
+            if self.filament_pos != self.FILAMENT_POS_HOMED_GATE:
+                self.log_info("Filament detected at gate %d sensor, reconciling state to HOMED_GATE" % self.gate_selected)
+                self._set_filament_pos_state(self.FILAMENT_POS_HOMED_GATE)
             self._set_filament_position(0.0)
             return True
         elif pg_detected:
-            # We only transition to UNLOADED if we aren't already further down the path
-            if self.filament_pos not in [self.FILAMENT_POS_HOMED_ENTRY, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_LOADED]:
-                self.log_info("Filament detected at pre-gate %d sensor, reconciling state to UNLOADED (preloaded)" % self.gate_selected)
-                self._set_filament_pos_state(self.FILAMENT_POS_UNLOADED)
+            # Multi-Hare: If only pre-gate is seen, it's preloaded. We treat it as HOMED_GATE
+            # so that it gets a chance to be homed/checked properly by subsequent moves.
+            if self.filament_pos not in [self.FILAMENT_POS_HOMED_ENTRY, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_GATE]:
+                self.log_info("Filament detected at pre-gate %d sensor, reconciling state to HOMED_GATE (preloaded)" % self.gate_selected)
+                self._set_filament_pos_state(self.FILAMENT_POS_HOMED_GATE)
                 self._set_filament_position(-self.gate_parking_distance)
             return True
 
