@@ -9285,7 +9285,7 @@ class Mmu:
                                 active_sys = self.get_system_id(self.gate_selected)
                                 # Optimization: If the already-loaded tool is active, don't unload it just to check others!
                                 if self.filament_pos == self.FILAMENT_POS_LOADED:
-                                    self.log_info("Tool T%d already loaded, skipping clearing System %d" % (self.get_tool_by_gate(self.gate_selected), active_sys))
+                                    self.log_info("Gate %d already loaded, skipping clearing System %d" % (self.gate_selected, active_sys))
                                 else:
                                     involved_systems.add(active_sys)
                             
