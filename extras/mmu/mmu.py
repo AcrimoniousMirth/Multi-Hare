@@ -3647,10 +3647,11 @@ class Mmu:
                 self._display_visual_state(silent=silent)
 
             # Minimal save_variable writes
-            if state in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_UNLOADED]:
-                self.save_variable(self.VARS_MMU_FILAMENT_POS, state, write=True)
-            elif self.save_variables.allVariables.get(self.VARS_MMU_FILAMENT_POS, 0) != self.FILAMENT_POS_UNKNOWN:
-                self.save_variable(self.VARS_MMU_FILAMENT_POS, self.FILAMENT_POS_UNKNOWN, write=True)
+        # Multi-Hare: Persist homed states on disk so they aren't lost when switching systems
+        if state in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_UNLOADED, self.FILAMENT_POS_HOMED_ENTRY, self.FILAMENT_POS_HOMED_TS]:
+            self.save_variable(self.VARS_MMU_FILAMENT_POS, state, write=True)
+        elif self.save_variables.allVariables.get(self.VARS_MMU_FILAMENT_POS, 0) != self.FILAMENT_POS_UNKNOWN:
+            self.save_variable(self.VARS_MMU_FILAMENT_POS, self.FILAMENT_POS_UNKNOWN, write=True)
 
         self._adjust_espooler_assist()
 
@@ -3659,11 +3660,6 @@ class Mmu:
         ex_detected = self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY)
 
         if th_detected:
-            # If detected at Toolhead sensor, it is at least that far.
-            # We set it to HOMED_TS (8). Even if it was already LOADED (10),
-            # downgrading to 8 is safe and forces a final true-up move to the nozzle
-            # when the print actually starts (via load_tool -> load_sequence).
-            # This handles the "filament is parked" scenario correctly.
             if self.filament_pos != self.FILAMENT_POS_HOMED_TS:
                 self.log_info("Filament detected at toolhead sensor, reconciling state to HOMED_TS")
                 self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
@@ -3674,10 +3670,13 @@ class Mmu:
         elif ex_detected:
             if self.filament_pos != self.FILAMENT_POS_HOMED_ENTRY:
                 self.log_info("Filament detected at extruder entry, reconciling state to HOMED_ENTRY")
+                # We use a silent update if possible to avoid redundant logging
                 self._set_filament_pos_state(self.FILAMENT_POS_HOMED_ENTRY)
 
             # Multi-Hare: Set physical position based on extruder entry sensor
-            self._set_filament_position(-(self.toolhead_extruder_to_nozzle + self.toolhead_entry_to_extruder))
+            # This is critical for _unload_extruder to have a correct starting point
+            pos = -(self.toolhead_extruder_to_nozzle + self.toolhead_entry_to_extruder)
+            self._set_filament_position(pos)
             return True
         return False
 
@@ -5545,7 +5544,9 @@ class Mmu:
         self.movequeues_wait()
 
         # Pre check to validate the presence of filament in the extruder and case where we don't need to form tip
-        filament_initially_present = self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD)
+        # Multi-Hare: Check both sensors. If filament is at the entry, we still need to
+        # know it's there so we don't assume the extruder is empty and reset position.
+        filament_initially_present = self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) or self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY)
         if filament_initially_present is False:
             self.log_debug("Tip forming skipped because no filament was detected")
 
@@ -9221,22 +9222,21 @@ class Mmu:
                                     self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
                                     continue
                                 filtered_gates_tools.append([gate, tool])
-                            
-                            self.mmu_toolhead.update_active_system(orig_system_id)
-                            gates_tools = filtered_gates_tools
 
-                            # Multi-Hare: Force initial eject only on involved systems if not already loaded
-                            involved_systems = set([self.get_system_id(g) for g, t in gates_tools])
-                            orig_system_id = self.system_active
-                            for sys_id in involved_systems:
+                            # Multi-Hare: 1. Identify systems that appear to have filament in them and need clearing
+                            involved_systems = set()
+                            if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) or self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY):
+                                involved_systems.add(self.get_system_id(self.gate_selected))
+                            
+                            required_gates = [g for g, t in filtered_gates_tools]
+                            for gate in required_gates:
+                                involved_systems.add(self.get_system_id(gate))
+
+                            for sys_id in sorted(list(involved_systems)):
                                 self.mmu_toolhead.update_active_system(sys_id)
                                 
-                                # Reconcile state (redundant but safe)
-                                self._reconcile_filament_pos_from_sensors()
-                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
-                                    continue
-
-                                if self.filament_pos != self.FILAMENT_POS_UNLOADED:
+                                # Reconcile state
+                                if self._reconcile_filament_pos_from_sensors():
                                     self.log_info("Unloading System %d prior to checking gates" % sys_id)
                                     self._note_toolchange("< %s" % self.selected_tool_string())
                                     self.last_statistics = {}
@@ -9246,6 +9246,7 @@ class Mmu:
                                     self._continue_after('unload')
                             self.mmu_toolhead.update_active_system(orig_system_id)
 
+                            # 2. Perform the actual gate checks
                             if len(gates_tools) > 1:
                                 self.log_info("Will check gates: %s" % ', '.join(str(g) for g,t in gates_tools))
                             with self.wrap_suppress_visual_log():
