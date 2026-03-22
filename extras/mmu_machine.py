@@ -654,7 +654,7 @@ class MmuToolHead(toolhead.ToolHead, object):
         mmu.system_active = system_id
         
         # 4. Update Hardware references (Extruder, Toolhead)
-        sys = mmu.get_active_system()
+        sys = mmu.systems.get(system_id)
         if not sys: return
         
         self.extruder_name = sys.get('extruder', 'extruder')
