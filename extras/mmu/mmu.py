@@ -9311,11 +9311,11 @@ class Mmu:
                             self.mmu_toolhead.update_active_system(orig_system_id)
 
                             # 2. Perform the actual gate checks
-                            if len(gates_tools) > 1:
-                                self.log_info("Will check gates: %s" % ', '.join(str(g) for g,t in gates_tools))
+                            if len(filtered_gates_tools) > 1:
+                                self.log_info("Will check gates: %s" % ', '.join(str(g) for g,t in filtered_gates_tools))
                             with self.wrap_suppress_visual_log():
                                 self._set_tool_selected(self.TOOL_GATE_UNKNOWN)
-                                for gate, tool in gates_tools:
+                                for gate, tool in filtered_gates_tools:
                                     try:
                                         self.select_gate(gate)
                                         self.log_info("Checking gate %d..." % gate)
