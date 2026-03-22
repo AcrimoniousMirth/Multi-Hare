@@ -3655,15 +3655,27 @@ class Mmu:
 
         self._adjust_espooler_assist()
 
+    def _get_sensor_name(self, base_name, sys_id=None):
+        if sys_id is None:
+            sys_id = self.system_active
+        if self.mmu_machine.multisystem:
+             return "unit_%d_%s" % (sys_id, base_name)
+        return base_name
+
     def _reconcile_filament_pos_from_sensors(self):
-        th_detected = self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD)
-        ex_detected = self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY)
+        # Multi-Hare: Resolve physical sensor names based on the active system
+        sn_th = self._get_sensor_name(self.SENSOR_TOOLHEAD)
+        sn_ex = self._get_sensor_name(self.SENSOR_EXTRUDER_ENTRY)
+        sn_ge = self._get_sensor_name(self.SENSOR_GATE)
+
+        th_detected = self.sensor_manager.check_sensor(sn_th)
+        ex_detected = self.sensor_manager.check_sensor(sn_ex)
 
         if th_detected:
             # Multi-Hare: Only reset status if the gate logically belongs to this system
             if self.gate_selected >= 0 and self.get_system_id(self.gate_selected) == self.system_active:
                 if self.filament_pos != self.FILAMENT_POS_HOMED_TS:
-                    self.log_info("Filament detected at toolhead sensor, reconciling state to HOMED_TS")
+                    self.log_info("Filament detected at toolhead sensor %s, reconciling state to HOMED_TS" % sn_th)
                     self._set_filament_pos_state(self.FILAMENT_POS_HOMED_TS)
 
             # Multi-Hare: Set physical position based on toolhead sensor
@@ -3671,7 +3683,7 @@ class Mmu:
             return True
         elif ex_detected:
             if self.filament_pos != self.FILAMENT_POS_HOMED_ENTRY:
-                self.log_info("Filament detected at extruder entry, reconciling state to HOMED_ENTRY")
+                self.log_info("Filament detected at extruder entry sensor %s, reconciling state to HOMED_ENTRY" % sn_ex)
                 # We use a silent update if possible to avoid redundant logging
                 self._set_filament_pos_state(self.FILAMENT_POS_HOMED_ENTRY)
 
@@ -3681,12 +3693,12 @@ class Mmu:
             self._set_filament_position(pos)
             return True
 
-        gate_detected = self.sensor_manager.check_sensor(self.SENSOR_GATE) if self.gate_selected >= 0 else False
+        gate_detected = self.sensor_manager.check_sensor(sn_ge) if self.gate_selected >= 0 else False
         pg_detected = self.sensor_manager.check_gate_sensor(self.SENSOR_PRE_GATE_PREFIX, self.gate_selected) if self.gate_selected >= 0 else False
         
         if gate_detected:
             if self.filament_pos != self.FILAMENT_POS_HOMED_GATE:
-                self.log_info("Filament detected at gate %d sensor, reconciling state to HOMED_GATE" % self.gate_selected)
+                self.log_info("Filament detected at gate sensor %s, reconciling state to HOMED_GATE" % sn_ge)
                 self._set_filament_pos_state(self.FILAMENT_POS_HOMED_GATE)
             self._set_filament_position(0.0)
             return True
@@ -5241,6 +5253,8 @@ class Mmu:
 
         self._set_filament_direction(self.DIRECTION_LOAD)
         self._initialize_filament_position(dwell=None)
+        # Multi-Hare: Sync to physical sensors before making any decisions
+        self._reconcile_filament_pos_from_sensors()
 
         try:
             home = False
@@ -5248,6 +5262,9 @@ class Mmu:
                 current_action = self._set_action(self.ACTION_LOADING)
                 if full:
                     home = self._must_home_to_extruder() or calibrating
+                    # Multi-Hare: If we are already in the extruder, we don't need to home again
+                    if self.filament_pos >= self.FILAMENT_POS_HOMED_EXTRUDER:
+                        home = False
                 else:
                     skip_extruder = True
 
