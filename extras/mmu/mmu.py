@@ -9286,8 +9286,16 @@ class Mmu:
                                 except MmuError as ee:
                                     raise MmuError("Failure re-selecting Tool %d:\n%s" % (tool_selected, str(ee)))
                             else:
-                                # At least restore the selected tool, but don't re-load filament
-                                self.select_tool(tool_selected)
+                                # Multi-Hare: Reload the tool if it was loaded before
+                                # the gate check (we had to unload it for checking)
+                                if filament_pos == self.FILAMENT_POS_LOADED and tool_selected >= 0:
+                                    self.log_info("Reloading tool T%d after gate check" % tool_selected)
+                                    self._note_toolchange("> %s" % self.selected_tool_string(tool=tool_selected))
+                                    self.last_statistics = {}
+                                    self._select_and_load_tool(tool_selected, purge=self.PURGE_NONE)
+                                    self._persist_gate_statistics()
+                                else:
+                                    self.select_tool(tool_selected)
 
                             if not quiet:
                                 self.log_info(self._mmu_visual_to_string())
