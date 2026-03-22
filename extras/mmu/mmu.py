@@ -9260,8 +9260,10 @@ class Mmu:
                             # Multi-Hare: 1. Identify systems that appear to have filament in them and need clearing
                             involved_systems = set()
                             
-                            # If Toolhead or Extruder sensors are triggered, we need to clear THAT specific system
-                            if self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) or self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY):
+                            # If Toolhead, Extruder, or MMU Gate sensors are triggered, we need to clear THAT specific system
+                            if (self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) or 
+                                self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY) or 
+                                self.sensor_manager.check_sensor(self.SENSOR_GATE)):
                                 active_sys = self.get_system_id(self.gate_selected)
                                 # Optimization: If the already-loaded initial tool is T0, don't unload it just to check others!
                                 if self.filament_pos == self.FILAMENT_POS_LOADED and self.gate_selected == initial_gate:
