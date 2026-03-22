@@ -9217,12 +9217,19 @@ class Mmu:
                             self.mmu_toolhead.update_active_system(pre_check_system_id)
                             gates_tools = filtered_gates_tools
 
-                            # Multi-Hare: Force initial eject only on involved systems
+                            # Multi-Hare: Force initial eject only on involved systems if not already loaded
                             involved_systems = set([self.get_system_id(g) for g, t in gates_tools])
                             orig_system_id = self.system_active
                             for sys_id in involved_systems:
                                 self.mmu_toolhead.update_active_system(sys_id)
+                                
+                                # Reconcile state. If filament is already at TS or loaded, we know the gate is available.
+                                # skip the slow unload if we already have a confirmed position.
                                 self._reconcile_filament_pos_from_sensors()
+                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
+                                    self.log_info("System %d already loaded/homed, skipping unload for check" % sys_id)
+                                    continue
+
                                 if self.filament_pos != self.FILAMENT_POS_UNLOADED:
                                     self.log_info("Unloading System %d prior to checking gates" % sys_id)
                                     self._note_toolchange("< %s" % self.selected_tool_string())
