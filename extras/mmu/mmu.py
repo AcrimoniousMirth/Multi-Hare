@@ -9190,31 +9190,21 @@ class Mmu:
                                 raise MmuError("Current gate is invalid")
 
                             # Multi-Hare: Filter out gates that are already loaded
+                            # We check status and reconcile sensors first.
                             filtered_gates_tools = []
-                            pre_check_system_id = self.system_active
+                            orig_system_id = self.system_active
                             for gate, tool in gates_tools:
                                 sys_id = self.get_system_id(gate)
-                                sys_data = self.systems.get(sys_id, {})
                                 self.mmu_toolhead.update_active_system(sys_id)
-
-                                # Optimized skip for specialized systems (e.g. System 0 with single gate)
-                                check_gate_verify = sys_data.get('check_gate_verify', True)
-                                is_single_gate = len(sys_data.get('tools', [])) == 1
-                                current_sys_gate = sys_data['tools'][0] if is_single_gate else -1
+                                self._reconcile_filament_pos_from_sensors()
                                 
-                                if not check_gate_verify:
-                                    # If it's a single gate system, we don't care if gate_selected is unknown
-                                    # as long as filament is detected at the head, it must be the only gate.
-                                    can_skip = (self.gate_selected == gate) or (is_single_gate and gate == current_sys_gate)
-                                    
-                                    if can_skip:
-                                        # Perform a "Sensor Reconcile" instead of a blind skip.
-                                        if self._reconcile_filament_pos_from_sensors():
-                                            self.log_info("Gate %d state reconciled from sensors for System %d, skipping physical check" % (gate, sys_id))
-                                            self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
-                                            continue
+                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
+                                    self.log_info("System %d already loaded/homed, marking Gate %d available (skipping check)" % (sys_id, gate))
+                                    self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
+                                    continue
                                 filtered_gates_tools.append([gate, tool])
-                            self.mmu_toolhead.update_active_system(pre_check_system_id)
+                            
+                            self.mmu_toolhead.update_active_system(orig_system_id)
                             gates_tools = filtered_gates_tools
 
                             # Multi-Hare: Force initial eject only on involved systems if not already loaded
@@ -9223,11 +9213,9 @@ class Mmu:
                             for sys_id in involved_systems:
                                 self.mmu_toolhead.update_active_system(sys_id)
                                 
-                                # Reconcile state. If filament is already at TS or loaded, we know the gate is available.
-                                # skip the slow unload if we already have a confirmed position.
+                                # Reconcile state (redundant but safe)
                                 self._reconcile_filament_pos_from_sensors()
                                 if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
-                                    self.log_info("System %d already loaded/homed, skipping unload for check" % sys_id)
                                     continue
 
                                 if self.filament_pos != self.FILAMENT_POS_UNLOADED:
