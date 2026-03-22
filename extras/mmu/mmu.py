@@ -9216,8 +9216,8 @@ class Mmu:
                                 self.mmu_toolhead.update_active_system(sys_id)
                                 self._reconcile_filament_pos_from_sensors()
                                 
-                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_HOMED_ENTRY]:
-                                    self.log_info("System %d already loaded/homed/at-entry, marking Gate %d available (skipping check)" % (sys_id, gate))
+                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
+                                    self.log_info("System %d already loaded/homed, marking Gate %d available (skipping check)" % (sys_id, gate))
                                     self._set_gate_status(gate, max(self.gate_status[gate], self.GATE_AVAILABLE))
                                     continue
                                 filtered_gates_tools.append([gate, tool])
@@ -9233,7 +9233,7 @@ class Mmu:
                                 
                                 # Reconcile state (redundant but safe)
                                 self._reconcile_filament_pos_from_sensors()
-                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_HOMED_ENTRY]:
+                                if self.filament_pos in [self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_TS]:
                                     continue
 
                                 if self.filament_pos != self.FILAMENT_POS_UNLOADED:
