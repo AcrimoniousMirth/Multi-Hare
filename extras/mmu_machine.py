@@ -660,11 +660,11 @@ class MmuToolHead(toolhead.ToolHead, object):
         self.extruder_name = sys.get('extruder', 'extruder')
         self.toolhead_name = sys.get('toolhead', 'T0')
         
-        if self.extruder_name in self.system_extruder_steppers:
-            self.mmu_extruder_stepper = self.system_extruder_steppers[self.extruder_name]
+        if self.extruder_name in self.mmu.mmu_machine.system_extruder_steppers:
+            self.mmu_extruder_stepper = self.mmu.mmu_machine.system_extruder_steppers[self.extruder_name]
         
         mmu.extruder_name = self.extruder_name
-        self.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
+        self.mmu.mmu_machine.mmu_extruder_stepper = self.mmu_extruder_stepper
 
         # Multi-Hare: Sync sensor manager state to the new system ID
         # This is critical for sensor skip-logic in MMU_PRINT_START to work.
