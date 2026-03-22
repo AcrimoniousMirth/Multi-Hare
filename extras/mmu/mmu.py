@@ -3680,6 +3680,24 @@ class Mmu:
             pos = -(self.toolhead_extruder_to_nozzle + self.toolhead_entry_to_extruder)
             self._set_filament_position(pos)
             return True
+
+        gate_detected = self.sensor_manager.check_sensor(self.SENSOR_GATE) if self.gate_selected >= 0 else False
+        pg_detected = self.sensor_manager.check_gate_sensor(self.SENSOR_PRE_GATE_PREFIX, self.gate_selected) if self.gate_selected >= 0 else False
+        
+        if gate_detected:
+            if self.filament_pos != self.FILAMENT_POS_UNLOADED:
+                self.log_info("Filament detected at gate %d sensor, reconciling state to UNLOADED" % self.gate_selected)
+                self._set_filament_pos_state(self.FILAMENT_POS_UNLOADED)
+            self._set_filament_position(0.0)
+            return True
+        elif pg_detected:
+            # We only transition to UNLOADED if we aren't already further down the path
+            if self.filament_pos not in [self.FILAMENT_POS_HOMED_ENTRY, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_LOADED]:
+                self.log_info("Filament detected at pre-gate %d sensor, reconciling state to UNLOADED (preloaded)" % self.gate_selected)
+                self._set_filament_pos_state(self.FILAMENT_POS_UNLOADED)
+                self._set_filament_position(-self.gate_parking_distance)
+            return True
+
         return False
 
     def _adjust_espooler_assist(self):
@@ -8300,6 +8318,7 @@ class Mmu:
     def _set_gate_status(self, gate, state):
         if 0 <= gate < self.num_gates:
             if state != self.gate_status[gate]:
+                self.log_debug("Multi-Hare: Gate %d status change %d -> %d" % (gate, self.gate_status[gate], state))
                 self.gate_status = list(self.gate_status) # Ensure that webhooks sees get_status() change
                 self.gate_status[gate] = state
                 self._persist_gate_status()
