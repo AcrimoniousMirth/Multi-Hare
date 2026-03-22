@@ -7109,14 +7109,10 @@ class Mmu:
                         try:
                             for i in range(attempts):
                                 try:
-                                    # Multi-Hare: Only unload if the system required for the NEW tool is loaded
-                                    # This avoids unloading the current system if the new tool is on a different toolhead
                                     new_sys_id = self.get_system_id(self.ttg_map[tool])
-                                    if new_sys_id != self.system_active:
-                                        self.mmu_toolhead.update_active_system(new_sys_id)
-                                        # Update prev_tool to reflect the (now active) system's state before potentially unloading it
-                                        prev_tool = self.tool_selected
 
+                                    # 1. Unload current tool if loaded (on current system)
+                                    # We do this BEFORE swapping so the tool is still mounted
                                     if self.filament_pos != self.FILAMENT_POS_UNLOADED:
                                         # Multi-Hare: For System 0, skip unload to gate.
                                         # Filament remains in toolhead (at retracted parking distance) while idle.
@@ -7124,6 +7120,22 @@ class Mmu:
                                             self.log_info("System 0: Skipping unload to gate, filament will remain in toolhead")
                                         else:
                                             self._unload_tool(form_tip=do_form_tip, prev_tool=prev_tool)
+
+                                    # 2. Perform physical toolhead swap if needed
+                                    if new_sys_id != self.system_active:
+                                        self.log_info("Toolhead Swap: Switching to System %d..." % new_sys_id)
+                                        # Synchronous call to SELECT_TOOL ensures hand-off is complete
+                                        self.wrap_gcode_command("SELECT_TOOL T=%d" % new_sys_id, wait=True)
+                                        
+                                        # 3. Update active MMU system (Python state)
+                                        # This sets the correct extruder/rail and re-synchronizes state
+                                        self.mmu_toolhead.update_active_system(new_sys_id)
+                                        
+                                        # Update prev_tool to reflect the (now active) system's state 
+                                        # (though it should already be UNLOADED now)
+                                        prev_tool = self.tool_selected
+
+                                    # 4. Load the new tool
                                     self._select_and_load_tool(tool, purge=do_purge)
                                     break
                                 except MmuError as ee:

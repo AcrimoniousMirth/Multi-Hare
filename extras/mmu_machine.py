@@ -578,7 +578,6 @@ class MmuToolHead(toolhead.ToolHead, object):
             if 'extruder' in self.system_extruder_steppers:
                 self.mmu_extruder_stepper = self.system_extruder_steppers['extruder']
 
-        self._in_handle_connect = True
         self.printer.register_event_handler('klippy:connect', self.handle_connect)
 
         # Add useful debugging command
@@ -601,9 +600,7 @@ class MmuToolHead(toolhead.ToolHead, object):
                 printer_extruder.extruder_stepper = mmu_ext
                 mmu_ext.stepper.set_trapq(printer_extruder.get_trapq())
         
-        self._in_handle_connect = True
         self.update_active_system()
-        self._in_handle_connect = False
 
     cmd_SET_MMU_EXTRUDER_help = "Switches the active extruder and syncs Multi-Hare system"
     def cmd_SET_MMU_EXTRUDER(self, gcmd):
@@ -719,15 +716,8 @@ class MmuToolHead(toolhead.ToolHead, object):
         mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d, Macro: %s)" % 
                            (self.toolhead_name, self.extruder_name, mmu.filament_pos, mmu.form_tip_macro))
 
-        # Synchronize Klipper's active extruder and physical toolhead
+        # Synchronize Klipper's active extruder
         try:
-            if is_switch and not self._in_handle_connect:
-                # 1. Physical Tool Change (if integrated with a toolchanger and homed)
-                if "xyz" in self.printer_toolhead.get_status(0)['homed_axes']:
-                    tool_num = re.sub("[^0-9]", "", self.toolhead_name)
-                    mmu.gcode.run_script_from_command("SELECT_TOOL T=%s" % tool_num)
-            
-            # 2. Extruder Activation
             mmu.gcode.run_script_from_command("ACTIVATE_EXTRUDER EXTRUDER=%s" % self.extruder_name)
         except Exception as e:
             mmu.log_debug("Failed to sync system %s: %s" % (self.toolhead_name, str(e)))
