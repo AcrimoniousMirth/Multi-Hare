@@ -782,12 +782,13 @@ class MmuSyncFeedbackManager:
             motor=motor,
             homing_move=homing_dir,
             endstop_name=sensor,
+            force_gear=use_gear_motor
         )
 
         if fhomed and self.sync_feedback_buffer_range != 0:
             if use_gear_motor:
                 # Move just a little more to find perfect neutral spot between sensors
-                _,_,_,_ = self.mmu.trace_filament_move("Centering sync feedback buffer", (self.sync_feedback_buffer_range * direction) / 2.)
+                _,_,_,_ = self.mmu.trace_filament_move("Centering sync feedback buffer", (self.sync_feedback_buffer_range * direction) / 2., force_gear=True)
         else:
             self.mmu.log_debug("Failed to reach neutral filament tension after moving %.1fmm" % max_move)
 
@@ -846,8 +847,8 @@ class MmuSyncFeedbackManager:
             initial_move_mm = -prop_state * per_side_budget_mm
             if abs(initial_move_mm) >= nudge_mm:
                 self.mmu.trace_filament_move(
-                    "Proportional initial adjust - extruder load",
-                    initial_move_mm, motor="gear", wait=True
+                    "Proportional initial adjust - mmu gear",
+                    initial_move_mm, motor="gear", wait=True, force_gear=True
                 )
                 moved_total_mm += initial_move_mm
                 moved_initial_mm = initial_move_mm
@@ -901,8 +902,8 @@ class MmuSyncFeedbackManager:
                 return moved_total_mm, False
 
             self.mmu.trace_filament_move(
-                "Proportional adjust - extruder load",
-                nudge_move_mm, motor="gear", wait=True
+                "Proportional adjust - mmu gear",
+                nudge_move_mm, motor="gear", wait=True, force_gear=True
             )
             moved_total_mm  += nudge_move_mm
             moved_nudges_mm += nudge_move_mm

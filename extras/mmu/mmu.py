@@ -5785,7 +5785,7 @@ class Mmu:
     #
     # All moves return: actual (relative), homed, measured, delta; mmu_toolhead.get_position[1] holds absolute position
     #
-    def trace_filament_move(self, trace_str, dist, speed=None, accel=None, motor="gear", homing_move=0, endstop_name="default", track=False, wait=False, encoder_dwell=False, speed_override=True):
+    def trace_filament_move(self, trace_str, dist, speed=None, accel=None, motor="gear", homing_move=0, endstop_name="default", track=False, wait=False, encoder_dwell=False, speed_override=True, force_gear=False):
         encoder_start = self.get_encoder_distance(dwell=encoder_dwell)
         pos = self.mmu_toolhead.get_position()
         ext_pos = self.toolhead.get_position()
@@ -5853,7 +5853,7 @@ class Mmu:
 
         # Multi-Hare Smart Sync: If we think we are moving gear-only but the extruder entry sensor is triggered,
         # we MUST move in sync to avoid binding or slipping.
-        if motor == "gear" and not self.calibrating:
+        if motor == "gear" and not self.calibrating and not force_gear:
              if self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY):
                  self.log_info("Filament detected at extruder entry, forcing synced move for safety")
                  motor = "gear+extruder"
