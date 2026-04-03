@@ -9301,26 +9301,14 @@ class Mmu:
                                     continue
                                 filtered_gates_tools.append([gate, tool])
 
-                            # Multi-Hare: 1. Identify systems that appear to have filament in them and need clearing
                             involved_systems = set()
-                            
-                            # If Toolhead, Extruder, or MMU Gate sensors are triggered, we need to clear THAT specific system
-                            if (self.sensor_manager.check_sensor(self.SENSOR_TOOLHEAD) or 
-                                self.sensor_manager.check_sensor(self.SENSOR_EXTRUDER_ENTRY) or 
-                                self.sensor_manager.check_sensor(self.SENSOR_GATE)):
-                                active_sys = self.get_system_id(self.gate_selected)
-                                # Optimization: If the already-loaded tool is active, don't unload it just to check others!
-                                if self.filament_pos == self.FILAMENT_POS_LOADED:
-                                    self.log_info("Gate %d already loaded, skipping clearing System %d" % (self.gate_selected, active_sys))
-                                else:
-                                    involved_systems.add(active_sys)
-                            
                             required_gates = [g for g, t in filtered_gates_tools]
                             for gate in required_gates:
-                                # We only need to clear it if it's NOT the gate we are currently at (to avoid circular unloads)
                                 sys_id = self.get_system_id(gate)
-                                if sys_id != self.system_active:
+                                if sys_id != orig_system_id:
                                     involved_systems.add(sys_id)
+                            
+                            self.log_debug("Multi-Hare: Involved systems to clear: %s" % list(involved_systems))
 
                             for sys_id in sorted(list(involved_systems)):
                                 self.mmu_toolhead.update_active_system(sys_id)
