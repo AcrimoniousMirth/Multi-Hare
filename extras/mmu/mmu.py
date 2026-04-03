@@ -770,6 +770,13 @@ class Mmu:
                 break
         
         logging.info("MMU: Loading systems configuration from %s" % systems_path)
+        try:
+            with open(systems_path, 'r') as f:
+                head = [f.readline().strip() for _ in range(20)]
+                logging.info("MMU: Systems config head: %s" % head)
+            logging.info("MMU: Systems config mtime: %s" % os.path.getmtime(systems_path))
+        except:
+            pass
 
         try:
             import configparser
