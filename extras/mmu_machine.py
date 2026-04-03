@@ -702,6 +702,11 @@ class MmuToolHead(toolhead.ToolHead, object):
 
         if is_switch or mmu.gate_selected == mmu.TOOL_GATE_UNKNOWN:
             mmu.gate_selected = mmu.save_variables.allVariables.get(var_gate, mmu.TOOL_GATE_UNKNOWN)
+            # Multi-Hare: Ensure we have a valid gate for this system to allow sensor reconciliation
+            if mmu.gate_selected == mmu.TOOL_GATE_UNKNOWN or mmu.get_system_id(mmu.gate_selected) != system_id:
+                default_gate = sys['tools'][0]
+                mmu.log_debug("Multi-Hare: No valid gate selected for System %d, defaulting to Gate %d" % (system_id, default_gate))
+                mmu.gate_selected = default_gate
 
         if is_switch or mmu.tool_selected == mmu.TOOL_GATE_UNKNOWN:
             mmu.tool_selected = mmu.save_variables.allVariables.get(var_tool, mmu.TOOL_GATE_UNKNOWN)

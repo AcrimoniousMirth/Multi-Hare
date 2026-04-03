@@ -4072,6 +4072,7 @@ class Mmu:
                 # Multi-Hare: Force disk write for global copy if requested (must be numeric type)
                 if write and isinstance(value, (int, float)):
                     self.gcode.run_script_from_command("SAVE_VARIABLE VARIABLE=%s VALUE=%s" % (variable, str(value)))
+                self.log_debug("Multi-Hare: Saving suffixed variable %s_%d = %s" % (variable, self.system_active, str(value)))
                 variable = "%s_%d" % (variable, self.system_active)
         self.save_variables.allVariables[variable] = value
         if write:
