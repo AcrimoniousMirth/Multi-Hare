@@ -1248,9 +1248,9 @@ class MmuKinematics:
             if isinstance(r, DummyRail):
                 positions.append(0.)
                 continue
-            s = next((s for s in r.steppers if s.get_trapq()), None) if i == 1 else None
+            s = next((s for s in r.steppers if s.get_name() in stepper_positions), None)
             name = s.get_name() if s else r.get_name()
-            positions.append(stepper_positions[name])
+            positions.append(stepper_positions.get(name, 0.))
         return positions
 
     def set_position(self, newpos, homing_axes):
