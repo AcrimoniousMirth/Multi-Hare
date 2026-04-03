@@ -70,6 +70,7 @@ class MmuSyncFeedbackManager:
         self.mmu.printer.register_event_handler("mmu:synced", self._handle_mmu_synced)
         self.mmu.printer.register_event_handler("mmu:unsynced", self._handle_mmu_unsynced)
         self.mmu.printer.register_event_handler("mmu:sync_feedback", self._handle_sync_feedback)
+        self.passive_correction_timer = None
 
         # Initial flowguard status
         self.flowguard_status = {'trigger': '', 'reason': '', 'level': 0.0, 'max_clog': 0.0, 'max_tangle': 0.0, 'active': False, 'enabled': bool(self.flowguard_enabled)}
@@ -500,9 +501,22 @@ class MmuSyncFeedbackManager:
         'state' should be -1 (tension), 0 (neutral), 1 (compressed)
         or can be a proportional float value between -1.0 and 1.0
         """
-        if not (self.mmu.is_enabled and self.sync_feedback_enabled and self.active): return
+        if not (self.mmu.is_enabled and self.sync_feedback_enabled): return
         if eventtime is None: eventtime = self.mmu.reactor.monotonic()
- 
+
+        if not self.active:
+            # Multi-Hare: Passive tension correction when not actively synced
+            # Debounce: only trigger if the state persists and not printing
+            if state != self.SF_STATE_NEUTRAL and not self.mmu.is_printing() and \
+               self.mmu.action == self.mmu.ACTION_NONE and \
+               self.mmu.filament_pos >= self.mmu.FILAMENT_POS_EXTRUDER_ENTRY:
+                if self.passive_correction_timer is None:
+                    self.passive_correction_timer = self.mmu.reactor.register_timer(self._handle_passive_tension, eventtime + 0.5)
+            elif state == self.SF_STATE_NEUTRAL and self.passive_correction_timer is not None:
+                self.mmu.reactor.update_timer(self.passive_correction_timer, self.mmu.reactor.NEVER)
+                self.passive_correction_timer = None
+            return
+
         msg = "MmuSyncFeedbackManager: Sync state changed to %s" % (self.get_sync_feedback_string(state))
         if self.mmu.mmu_machine.filament_always_gripped:
             self.mmu.log_debug(msg)
@@ -512,6 +526,18 @@ class MmuSyncFeedbackManager:
         move = self.extruder_monitor.get_and_reset_accumulated(self._handle_extruder_movement)
         status = self.ctrl.update(eventtime, move, state)
         self._process_status(eventtime, status)
+
+    def _handle_passive_tension(self, eventtime):
+        self.passive_correction_timer = None
+        if not self.active and not self.mmu.is_printing() and \
+           self.mmu.action == self.mmu.ACTION_NONE and \
+           self.mmu.filament_pos >= self.mmu.FILAMENT_POS_EXTRUDER_ENTRY:
+            state = self._get_sensor_state()
+            if state != self.SF_STATE_NEUTRAL:
+                self.mmu.log_info("Passive tension correction triggered (state=%s)" % self.get_sync_feedback_string(state))
+                # Call adjustment using gear motor only
+                self.adjust_filament_tension(use_gear_motor=True)
+        return self.mmu.reactor.NEVER
 
 
     def _process_status(self, eventtime, status):
