@@ -760,9 +760,15 @@ class Mmu:
         if not os.path.exists(systems_path):
             systems_path = os.path.expanduser("~/klipper_config/mmu/base/systems.conf")
         
+        # Multi-Hare: Search for config in parent directory of software (standard for non-pi/non-apt installs)
+        if not os.path.exists(systems_path):
+            systems_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../config/mmu/base/systems.conf"))
+
         if not os.path.exists(systems_path):
             # Fallback to config delivered with software
             systems_path = os.path.join(os.path.dirname(__file__), "../../config/base/systems.conf")
+
+        logging.info("MMU: Loading systems configuration from %s" % systems_path)
 
         try:
             import configparser
@@ -5602,10 +5608,12 @@ class Mmu:
             self._set_filament_position(-self.toolhead_extruder_to_nozzle)
             return False
 
+        self.log_debug("MMU per-system tip forming macro: %s" % self.form_tip_macro)
         if self.form_tip_macro == "none":
+            self.log_info("Tip forming bypassed for this system")
             return True
-
-        gcode_macro = self.printer.lookup_object("gcode_macro %s" % self.form_tip_macro, None)
+        
+        gcode_macro = self.printer.lookup_object("gcode_macro %s" % self.form_tip_macro, "_MMU_FORM_TIP")
         if gcode_macro is None:
             raise MmuError("Filament tip forming macro '%s' not found" % self.form_tip_macro)
 
