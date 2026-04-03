@@ -715,12 +715,16 @@ class MmuToolHead(toolhead.ToolHead, object):
         mmu.save_variable(mmu.VARS_MMU_TOOL_SELECTED, mmu.tool_selected, global_only=True)
         mmu.save_variable(mmu.VARS_MMU_FILAMENT_REMAINING, mmu.filament_remaining, global_only=True)
 
+        if self.mmu_machine.multigear:
+            # Ensure the gear rail is using the correct stepper for this system
+            # Note: We must do this AFTER gate_selected has been restored!
+            if mmu.gate_selected >= 0 and mmu.get_system_id(mmu.gate_selected) == system_id:
+                self.select_gear_stepper(mmu.gate_selected)
+            else:
+                self.select_gear_stepper(0 if system_id == 0 else -1) # Default for sys 0 or none if unknown for others
+
         mmu.log_debug("Multi-Hare: Active System updated to %s (Extruder: %s, State: %d, Macro: %s)" % 
                            (self.toolhead_name, self.extruder_name, mmu.filament_pos, mmu.form_tip_macro))
-
-        # Multi-Hare: Only select gear motor if it actually belongs to the system being activated.
-        if mmu.gate_selected >= 0 and mmu.get_system_id(mmu.gate_selected) == system_id:
-             self.select_gear_stepper(mmu.gate_selected)
 
         # Synchronize Klipper's active extruder
         try:
@@ -805,6 +809,9 @@ class MmuToolHead(toolhead.ToolHead, object):
                 self.selected_gear_steppers.append(s)
                 if s not in gear_rail.steppers:
                     gear_rail.steppers.append(s)
+                # Multi-Hare: Ensure we reset any stale programmatic direction inversions
+                # (e.g. leftovers from RotarySelector or manual commands)
+                s.set_dir_inverted(False)
                 self._register(m_th, s, trapq=mmu_trapq)
             elif s not in synced_steppers:
                 # Cripple only if not currently synced by the printer

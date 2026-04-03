@@ -3703,11 +3703,11 @@ class Mmu:
             self._set_filament_position(0.0)
             return True
         elif pg_detected:
-            # Multi-Hare: If only pre-gate is seen, it's preloaded. We treat it as HOMED_GATE
-            # so that it gets a chance to be homed/checked properly by subsequent moves.
+            # Multi-Hare: If only pre-gate is seen, it's preloaded. We treat it as UNLOADED
+            # but with the correct position so that subsequent load/homing moves start from here.
             if self.filament_pos not in [self.FILAMENT_POS_HOMED_ENTRY, self.FILAMENT_POS_HOMED_TS, self.FILAMENT_POS_LOADED, self.FILAMENT_POS_HOMED_GATE]:
-                self.log_info("Filament detected at pre-gate %d sensor, reconciling state to HOMED_GATE (preloaded)" % self.gate_selected)
-                self._set_filament_pos_state(self.FILAMENT_POS_HOMED_GATE)
+                self.log_info("Filament detected at pre-gate %d sensor, reconciling state to UNLOADED (preloaded)" % self.gate_selected)
+                self._set_filament_pos_state(self.FILAMENT_POS_UNLOADED)
                 self._set_filament_position(-self.gate_parking_distance)
             return True
 
