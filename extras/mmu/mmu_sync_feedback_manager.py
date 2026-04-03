@@ -731,8 +731,8 @@ class MmuSyncFeedbackManager:
             self.mmu.log_debug("No active sync feedback sensors; cannot adjust filament tension")
             return actual, fhomed
 
-        max_move = max_move or self.sync_feedback_buffer_maxrange
-        self.mmu.log_debug("Monitoring extruder entrance transition for up to %.1fmm..." % max_move)
+        max_move = max_move or (self.sync_feedback_buffer_maxrange * 2.5) or 25.0
+        self.mmu.log_debug("Monitoring filament tension for up to %.1fmm..." % max_move)
 
         motor = "gear" if use_gear_motor else "extruder"
         speed = min(self.mmu.gear_homing_speed, self.mmu.extruder_homing_speed) # Keep this tension adjustment slow
@@ -775,6 +775,7 @@ class MmuSyncFeedbackManager:
                 sensor = self.mmu.SENSOR_COMPRESSION
                 homing_dir = 1
 
+        self.mmu.log_debug("Homing to %s sensor '%s' (max_move=%.1fmm, direction=%d, homing_dir=%d)" % (sensor, self.mmu.sensor_manager.get_mapped_endstop_name(sensor), max_move, direction, homing_dir))
         actual,fhomed,_,_ = self.mmu.trace_filament_move(
             msg,
             max_move * direction,
