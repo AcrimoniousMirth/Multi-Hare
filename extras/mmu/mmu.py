@@ -756,18 +756,19 @@ class Mmu:
 
     def _setup_multi_system(self, config):
         self.systems = {}
-        systems_path = os.path.expanduser("~/printer_data/config/mmu/base/systems.conf")
-        if not os.path.exists(systems_path):
-            systems_path = os.path.expanduser("~/klipper_config/mmu/base/systems.conf")
+        search_paths = [
+            os.path.expanduser("~/printer_data/config/mmu/base/systems.conf"),
+            os.path.expanduser("~/klipper_config/mmu/base/systems.conf"),
+            os.path.expanduser("/home/manta/printer_data/config/mmu/base/systems.conf"), # Specific to user's printer
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../config/mmu/base/systems.conf")),
+            os.path.join(os.path.dirname(__file__), "../../config/base/systems.conf") # Fallback
+        ]
+        systems_path = ""
+        for path in search_paths:
+            if os.path.exists(path):
+                systems_path = path
+                break
         
-        # Multi-Hare: Search for config in parent directory of software (standard for non-pi/non-apt installs)
-        if not os.path.exists(systems_path):
-            systems_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../config/mmu/base/systems.conf"))
-
-        if not os.path.exists(systems_path):
-            # Fallback to config delivered with software
-            systems_path = os.path.join(os.path.dirname(__file__), "../../config/base/systems.conf")
-
         logging.info("MMU: Loading systems configuration from %s" % systems_path)
 
         try:
@@ -787,8 +788,14 @@ class Mmu:
                         'toolhead_sensor': cp.get(section, 'toolhead_sensor'),
                         'tension_sensor': cp.get(section, 'tension_sensor'),
                         'form_tip_macro': cp.get(section, 'form_tip_macro', fallback=self.form_tip_macro),
+                        'bypass_unload_at_print_end': cp.getboolean(section, 'bypass_unload_at_print_end', fallback=False),
                         'check_gate_verify': cp.getboolean(section, 'check_gate_verify', fallback=True),
                     }
+                    logging.info("MMU: Registered System %d: Tools=%s, Toolhead=%s, Extruder=%s, TipMacro=%s" % 
+                                 (system_id, self.systems[system_id]['tools'], 
+                                  self.systems[system_id]['toolhead'], 
+                                  self.systems[system_id]['extruder'],
+                                  self.systems[system_id]['form_tip_macro']))
             logging.info("Multi-Hare: Loaded %d systems from %s" % (len(self.systems), systems_path))
         except Exception as e:
             logging.error("Multi-Hare: Failed to load systems.cfg: %s" % str(e))
@@ -5608,9 +5615,9 @@ class Mmu:
             self._set_filament_position(-self.toolhead_extruder_to_nozzle)
             return False
 
-        self.log_debug("MMU per-system tip forming macro: %s" % self.form_tip_macro)
+        self.log_always("MMU per-system tip forming macro: %s" % self.form_tip_macro)
         if self.form_tip_macro == "none":
-            self.log_info("Tip forming bypassed for this system")
+            self.log_always("Tip forming bypassed for this system")
             return True
         
         gcode_macro = self.printer.lookup_object("gcode_macro %s" % self.form_tip_macro, "_MMU_FORM_TIP")
