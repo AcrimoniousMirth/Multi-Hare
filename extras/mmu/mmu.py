@@ -5148,7 +5148,7 @@ class Mmu:
                 ):
                     # Try to put filament in neutral tension by centering between sensors
                     # Two methods are available based on switch only sensors or proportional feedback
-                    actual,success = self.sync_feedback_manager.adjust_filament_tension()
+                    actual,success = self.sync_feedback_manager.adjust_filament_tension(use_gear_motor=True)
                     if success:
                         self.log_info("Filament tension in bowden successfully relaxed")
                     else:
