@@ -5086,6 +5086,21 @@ class Mmu:
                         self._set_filament_pos_state(self.FILAMENT_POS_EXTRUDER_ENTRY) # But could also still be POS_IN_BOWDEN!
                         raise MmuError("Failed to load filament passed the extruder entrance (sync-feedback buffer didn't detect neutral tension)")
 
+            # Multi-Hare: Proactive tension correction before the final nozzle load to ensure
+            # steady flow from the start of the print/purge. This clears any tension
+            # built up during homing to toolhead or extruder sensors.
+            if synced and self.gate_selected != self.TOOL_GATE_BYPASS:
+                has_tension, has_compression, has_proportional = self.sync_feedback_manager.get_active_sensors()
+                if has_tension or has_compression or has_proportional:
+                    self.log_debug("Checking for filament tension before final load...")
+                    actual, success = self.sync_feedback_manager.adjust_filament_tension(use_gear_motor=True)
+                    if actual != 0:
+                        length = max(length - (actual if use_retract else 0), 0) # Adjust remaining load distance if gear-only move was significant
+                        if success:
+                            self.log_info("Filament tension neutralized before nozzle load (moved %.2fmm)" % actual)
+                        else:
+                            self.log_warning("Neutralizing tension before nozzle load was incomplete (moved %.2fmm)" % actual)
+
             self.log_debug("Loading last %.1fmm to the nozzle..." % length)
             _,_,measured,delta = self.trace_filament_move("Loading filament to nozzle", length, speed=speed, motor=motor, wait=True)
             self._set_filament_remaining(0.)
