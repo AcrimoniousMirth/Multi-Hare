@@ -7172,9 +7172,11 @@ class Mmu:
                                     # 1. Unload current tool if loaded (on current system)
                                     # We do this BEFORE swapping so the tool is still mounted
                                     if self.filament_pos != self.FILAMENT_POS_UNLOADED:
-                                        # Multi-Hare: For System 0, skip unload to gate.
+                                        # Multi-Hare: For System 0 AND when changing systems, skip unload to gate.
                                         # Filament remains in toolhead (at retracted parking distance) while idle.
-                                        if self.system_active == 0 and self.sensor_manager.check_all_sensors_in_path():
+                                        if new_sys_id != self.system_active and self.sensor_manager.check_all_sensors_in_path():
+                                            self.log_info("Toolhead Swap: Skipping unload to gate, filament will remain mounted in %s" % self.toolhead_name)
+                                        elif self.system_active == 0 and self.sensor_manager.check_all_sensors_in_path():
                                             self.log_info("System 0: Skipping unload to gate, filament will remain in toolhead")
                                         else:
                                             self._unload_tool(form_tip=do_form_tip, prev_tool=prev_tool)
